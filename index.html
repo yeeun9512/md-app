@@ -772,8 +772,23 @@ function renderProducts() {
   document.getElementById('content').innerHTML = `
     <div class="section-header">
       <h2>상품 목록 <span style="font-size:14px;color:var(--text-muted);font-weight:400;">(총 ${products.length}개)</span></h2>
-      <button class="btn btn-primary" onclick="openProductModal()">+ 상품 추가</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <label class="btn btn-secondary btn-sm" for="product-xlsx-upload" style="cursor:pointer;">📤 엑셀 일괄 업로드</label>
+        <input type="file" id="product-xlsx-upload" accept=".xlsx,.xls" style="display:none" onchange="handleProductXlsxUpload(event)" />
+        <button class="btn btn-primary btn-sm" onclick="openProductModal()">+ 상품 추가</button>
+      </div>
     </div>
+
+    <div class="upload-zone" id="product-upload-zone"
+      ondragover="event.preventDefault();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="handleProductXlsxDrop(event)"
+      onclick="document.getElementById('product-xlsx-upload').click()">
+      <div class="upload-icon">🏷️</div>
+      <p><strong>엑셀 파일을 드래그하거나 클릭</strong>하여 업로드하세요</p>
+      <p style="font-size:12px;margin-top:6px;">상품명, 카테고리, 브랜드, 가격, 상태 컬럼이 포함된 .xlsx 파일</p>
+    </div>
+
     <div class="table-wrapper">
       <table>
         <thead><tr><th>상품명</th><th>카테고리</th><th>브랜드</th><th>가격</th><th>상태</th><th>메모</th><th>작업</th></tr></thead>
@@ -851,6 +866,48 @@ function deleteProduct(idx) {
   store['상품'].splice(idx, 1);
   saveSheet('상품', store['상품']);
   renderProducts();
+}
+
+function handleProductXlsxUpload(e) {
+  const file = e.target.files[0];
+  if (file) parseProductXlsx(file);
+  e.target.value = '';
+}
+
+function handleProductXlsxDrop(e) {
+  e.preventDefault();
+  document.getElementById('product-upload-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) parseProductXlsx(file);
+}
+
+function parseProductXlsx(file) {
+  showLoading(true);
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const wb = XLSX.read(ev.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const mapped = rows.map(r => ({
+        name:     r['상품명']   || r['name']     || r['Name']     || '',
+        category: r['카테고리'] || r['category'] || '기타',
+        brand:    r['브랜드']   || r['brand']    || '',
+        price:    Number(r['가격'] || r['price'] || 0),
+        status:   r['상태']    || r['status']   || '판매중',
+        memo:     r['메모']    || r['memo']      || ''
+      })).filter(r => r.name);
+      store['상품'] = [...(store['상품'] || []), ...mapped];
+      saveSheet('상품', store['상품']);
+      renderProducts();
+      showToast(`${mapped.length}개 상품을 불러왔습니다.`, 'success');
+    } catch(err) {
+      showToast('엑셀 파싱 실패: ' + err.message, 'error');
+    } finally {
+      showLoading(false);
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 // ============================================================
