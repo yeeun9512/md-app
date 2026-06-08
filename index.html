@@ -194,17 +194,8 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
 </head>
 <body>
 
-<!-- Setup Screen -->
-<div id="setup-screen">
-  <div class="setup-box">
-    <div class="logo">📊</div>
-    <h1>MD/마케팅 대시보드</h1>
-    <p>Google Apps Script URL을 입력하여 시작하세요</p>
-    <input type="text" id="script-url-input" placeholder="https://script.google.com/macros/s/..." />
-    <button class="btn btn-primary" style="width:100%;justify-content:center;height:44px;font-size:15px;" onclick="saveScriptUrl()">시작하기</button>
-    <span class="skip-link" onclick="skipSetup()">나중에 설정 (로컬 저장만 사용)</span>
-  </div>
-</div>
+<!-- Setup Screen (hidden - URL hardcoded) -->
+<div id="setup-screen" style="display:none;"></div>
 
 <!-- Sidebar overlay -->
 <div id="overlay" onclick="closeSidebar()"></div>
@@ -512,7 +503,7 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
 // ============================================================
 // STATE
 // ============================================================
-let SCRIPT_URL = localStorage.getItem('scriptUrl') || '';
+let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwIZgz-FnDJn_xMCLjfjLejfw1YECm3bcOyuJVnxVKx-jSEN4ANZA1aIOp72XrSg7gqUw/exec';
 let invData = []; // parsed inventory rows
 let invFiltered = [];
 let invPage = 1;
@@ -874,6 +865,13 @@ function processProdFile(file) {
       function cleanName(s) {
         return s.replace(/^[▣■□▶▷●○◆◇★☆]+\s*/, '').trim();
       }
+      function parseCmsStatus(s) {
+        const v = (s || '').trim();
+        if (v === '정상' || v === '판매' || v === '노출') return '판매중';
+        if (v === '숨김' || v === '비노출') return '숨김';
+        if (v === '품절') return '품절';
+        return v || '-';
+      }
 
       prodData = rows.slice(1).map((row, i) => {
         const code = col(row, '상품코드');
@@ -885,7 +883,7 @@ function processProdFile(file) {
           category: parseCatCMS(col(row, '대분류')),
           brand: col(row, '브랜드 대분류'),
           price: parsePrice(col(row, '판매가')),
-          status: col(row, '상품상태'),
+          status: parseCmsStatus(col(row, '상품상태')),
           views: parseInt(col(row, '조회수')) || 0,
           orders: parseInt(col(row, '주문수')) || 0,
           sales: parseInt(col(row, '판매수')) || 0,
@@ -966,7 +964,7 @@ function renderProdTable() {
 
   const tbody = document.getElementById('prod-tbody');
   tbody.innerHTML = pageData.map(r => {
-    const statusBadge = r.status.includes('판매') ? 'badge-blue' : r.status.includes('숨김') ? 'badge-gray' : r.status.includes('품절') ? 'badge-red' : 'badge-gray';
+    const statusBadge = r.status === '판매중' ? 'badge-green' : r.status === '숨김' ? 'badge-gray' : r.status === '품절' ? 'badge-red' : 'badge-gray';
     return `<tr>
       <td style="font-family:monospace;font-size:12px;">${r.code}</td>
       <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.refName || '-'}</td>
@@ -1339,18 +1337,7 @@ function showToast(msg) {
 // STARTUP
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
-  if (SCRIPT_URL) {
-    document.getElementById('setup-screen').style.display = 'none';
-    init();
-  } else {
-    // Pre-fill if exists
-    document.getElementById('script-url-input').value = '';
-  }
-
-  // invData / prodData are large files — not cached in localStorage (quota issue)
-  // User must re-upload each session
-  if (false) {
-  }
+  init();
 });
 </script>
 </body>
