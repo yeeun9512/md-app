@@ -317,7 +317,7 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
         <table>
           <thead>
             <tr>
-              <th>상품코드</th><th>상품명</th><th>카테고리</th><th>브랜드</th>
+              <th>상품코드</th><th>참고상품명</th><th>상품명(full)</th><th>카테고리</th><th>브랜드</th>
               <th>판매가</th><th>상태</th><th>조회수</th><th>주문수</th><th>판매수</th>
             </tr>
           </thead>
@@ -572,6 +572,17 @@ function init() {
 
   // Load from GSheet if URL set
   if (SCRIPT_URL) {
+    // 재고: Google Sheets에서 불러오기 (업로드한 적 있으면 자동 복원)
+    loadSheetData('재고').then(d => {
+      if (d && d.length) {
+        invData = d;
+        renderInvKPI();
+        populateInvBrandFilter();
+        filterInventory();
+        document.getElementById('inv-upload-zone').style.display = 'none';
+        showToast(`📦 재고 ${invData.length.toLocaleString()}건 불러옴`);
+      }
+    }).catch(()=>{});
     loadSheetData('캘린더').then(d => { if (d && d.length) { calEvents = d; localStorage.setItem('calEvents', JSON.stringify(calEvents)); renderCalendar(); } }).catch(()=>{});
     loadSheetData('매출').then(d => { if (d && d.length) { salesData = d; localStorage.setItem('salesData', JSON.stringify(salesData)); initSales(); } }).catch(()=>{});
     loadSheetData('할일').then(d => { if (d && d.length) { todosData = d; localStorage.setItem('todosData', JSON.stringify(todosData)); renderTodos(); } }).catch(()=>{});
@@ -708,16 +719,32 @@ function processInvFile(file) {
           warehouseQty: numCol(row, '창고재고'),
           storeQty: numCol(row, '매장재고'),
           onlineQty: numCol(row, '자사몰연동'),
-          _raw: row
         };
       }).filter(Boolean);
 
-      localStorage.setItem('invData', JSON.stringify(invData));
       renderInvKPI();
       populateInvBrandFilter();
       filterInventory();
       document.getElementById('inv-upload-zone').style.display = 'none';
-      showToast(`재고 데이터 ${invData.length}건 로드 완료`);
+      showToast(`재고 데이터 ${invData.length}건 로드 중... Google Sheets에 저장합니다.`);
+
+      // Google Sheets에 필요한 컬럼만 저장
+      const toSave = invData.map(r => ({
+        sku: r.sku,
+        name: r.name,
+        brand: r.brand,
+        category: r.category,
+        price: r.price,
+        status: r.status,
+        warehouseQty: r.warehouseQty,
+        storeQty: r.storeQty,
+        onlineQty: r.onlineQty,
+      }));
+      saveSheetData('재고', toSave).then(() => {
+        showToast(`✅ 재고 ${invData.length.toLocaleString()}건 Google Sheets 저장 완료!`);
+      }).catch(() => {
+        showToast('⚠️ Google Sheets 저장 실패 (앱에서는 정상 표시됨)', 'warn');
+      });
     } catch(err) {
       console.error(err);
       showToast('파일 파싱 중 오류가 발생했습니다: ' + err.message);
@@ -805,7 +832,6 @@ function renderInvTable() {
 
 function changeInvStatus(idx, newStatus) {
   invData[idx].status = newStatus;
-  localStorage.setItem('invData', JSON.stringify(invData));
   renderInvKPI();
   // Save changed row to GSheet
   const row = invData[idx];
@@ -866,7 +892,6 @@ function processProdFile(file) {
         };
       }).filter(Boolean);
 
-      localStorage.setItem('prodData', JSON.stringify(prodData));
       renderProdKPI();
       filterProducts();
       document.getElementById('prod-upload-zone').style.display = 'none';
@@ -944,7 +969,8 @@ function renderProdTable() {
     const statusBadge = r.status.includes('판매') ? 'badge-blue' : r.status.includes('숨김') ? 'badge-gray' : r.status.includes('품절') ? 'badge-red' : 'badge-gray';
     return `<tr>
       <td style="font-family:monospace;font-size:12px;">${r.code}</td>
-      <td title="${r.name}" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${r.refName || r.name}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.refName || '-'}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text-secondary);" title="${r.name}">${r.name || '-'}</td>
       <td>${r.category}</td>
       <td>${r.brand}</td>
       <td>${r.price ? r.price.toLocaleString() + '원' : '-'}</td>
@@ -1321,25 +1347,9 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('script-url-input').value = '';
   }
 
-  // Restore cached data
-  const cachedInv = localStorage.getItem('invData');
-  if (cachedInv) {
-    try {
-      invData = JSON.parse(cachedInv);
-      renderInvKPI();
-      populateInvBrandFilter();
-      filterInventory();
-      document.getElementById('inv-upload-zone').style.display = 'none';
-    } catch(e) {}
-  }
-  const cachedProd = localStorage.getItem('prodData');
-  if (cachedProd) {
-    try {
-      prodData = JSON.parse(cachedProd);
-      renderProdKPI();
-      filterProducts();
-      document.getElementById('prod-upload-zone').style.display = 'none';
-    } catch(e) {}
+  // invData / prodData are large files — not cached in localStorage (quota issue)
+  // User must re-upload each session
+  if (false) {
   }
 });
 </script>
