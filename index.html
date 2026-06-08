@@ -838,7 +838,8 @@ function sortTable(type, key) {
   if (iconEl) iconEl.textContent = s.dir === 1 ? '↑' : '↓';
 
   if (type === 'inv') { invPage = 1; renderInvTable(); }
-  else { prodPage = 1; renderProdTable(); }
+  else if (type === 'prod') { prodPage = 1; renderProdTable(); }
+  else if (type === 'sales') { salesPage = 1; renderSalesTable(); }
 }
 
 function applySortInv(arr) {
