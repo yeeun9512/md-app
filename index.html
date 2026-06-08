@@ -1,1510 +1,1347 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MD / 마케팅 관리 시스템</title>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    /* ===== CSS Variables & Reset ===== */
-    :root {
-      --sidebar-bg: #1a1f3e;
-      --sidebar-hover: #252b52;
-      --accent: #4F6EF7;
-      --accent-dark: #3a57e8;
-      --accent-light: #7b95f9;
-      --bg: #f0f2f8;
-      --card-bg: #ffffff;
-      --text: #1e2235;
-      --text-muted: #6b7280;
-      --border: #e5e7eb;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-      --radius: 12px;
-      --shadow: 0 2px 12px rgba(0,0,0,0.08);
-      --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', 'Malgun Gothic', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MD/마케팅 대시보드</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --sidebar-bg: #1a1f3e;
+  --accent: #4F6EF7;
+  --accent-light: #6b85f9;
+  --content-bg: #f4f6fb;
+  --card-bg: #ffffff;
+  --text-primary: #1a1f3e;
+  --text-secondary: #6b7280;
+  --border: #e5e7eb;
+  --red: #ef4444;
+  --orange: #f97316;
+  --green: #22c55e;
+  --gray: #9ca3af;
+  --sidebar-width: 220px;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--content-bg); color: var(--text-primary); display: flex; min-height: 100vh; }
 
-    /* ===== Setup Screen ===== */
-    #setup-screen {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 100vh; background: linear-gradient(135deg, #1a1f3e 0%, #2d3574 100%);
-    }
-    .setup-card {
-      background: #fff; border-radius: 20px; padding: 48px 40px;
-      width: 100%; max-width: 480px; box-shadow: var(--shadow-lg);
-      text-align: center;
-    }
-    .setup-icon { font-size: 48px; margin-bottom: 16px; }
-    .setup-card h1 { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-    .setup-card p { color: var(--text-muted); font-size: 14px; margin-bottom: 32px; line-height: 1.6; }
-    .setup-input {
-      width: 100%; padding: 14px 16px; border: 2px solid var(--border);
-      border-radius: var(--radius); font-size: 14px; outline: none;
-      transition: border-color 0.2s;
-    }
-    .setup-input:focus { border-color: var(--accent); }
-    .setup-btn {
-      width: 100%; margin-top: 16px; padding: 14px;
-      background: var(--accent); color: #fff; border: none;
-      border-radius: var(--radius); font-size: 16px; font-weight: 600;
-      cursor: pointer; transition: background 0.2s;
-    }
-    .setup-btn:hover { background: var(--accent-dark); }
-    .setup-tips { margin-top: 24px; text-align: left; background: #f8f9ff; border-radius: 10px; padding: 16px; }
-    .setup-tips h3 { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 8px; }
-    .setup-tips li { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; list-style: none; padding-left: 16px; position: relative; }
-    .setup-tips li::before { content: '•'; position: absolute; left: 4px; color: var(--accent); }
+/* Sidebar */
+#sidebar {
+  width: var(--sidebar-width); background: var(--sidebar-bg); color: #fff;
+  display: flex; flex-direction: column; flex-shrink: 0; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; transition: transform .3s;
+}
+#sidebar-logo { padding: 24px 20px 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
+#sidebar-logo h1 { font-size: 16px; font-weight: 700; letter-spacing: .5px; }
+#sidebar-logo p { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 2px; }
+#sidebar nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 11px 20px; cursor: pointer; transition: background .2s; font-size: 14px; color: rgba(255,255,255,.7); border-left: 3px solid transparent; }
+.nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+.nav-item.active { background: rgba(79,110,247,.2); color: #fff; border-left-color: var(--accent); }
+.nav-item .icon { font-size: 18px; width: 22px; text-align: center; }
+#sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.1); font-size: 12px; color: rgba(255,255,255,.4); }
 
-    /* ===== Main App Layout ===== */
-    #app { display: none; height: 100vh; overflow: hidden; }
-    .layout { display: flex; height: 100vh; }
+/* Main */
+#main { margin-left: var(--sidebar-width); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+#topbar { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+#topbar h2 { font-size: 18px; font-weight: 600; }
+#topbar-right { display: flex; align-items: center; gap: 12px; }
+#btn-settings { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+#btn-settings:hover { background: var(--content-bg); }
+#hamburger { display: none; background: none; border: none; cursor: pointer; font-size: 22px; }
 
-    /* ===== Sidebar ===== */
-    .sidebar {
-      width: 240px; min-width: 240px; background: var(--sidebar-bg);
-      display: flex; flex-direction: column; transition: width 0.3s;
-      z-index: 100; position: relative;
-    }
-    .sidebar-logo {
-      padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
-    .sidebar-logo h2 { color: #fff; font-size: 18px; font-weight: 700; }
-    .sidebar-logo span { color: var(--accent-light); font-size: 12px; }
-    .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
-    .nav-item {
-      display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-      border-radius: 10px; color: rgba(255,255,255,0.65); cursor: pointer;
-      font-size: 14px; font-weight: 500; transition: all 0.2s; margin-bottom: 4px;
-      user-select: none;
-    }
-    .nav-item:hover { background: var(--sidebar-hover); color: #fff; }
-    .nav-item.active { background: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(79,110,247,0.4); }
-    .nav-item .nav-icon { font-size: 18px; width: 24px; text-align: center; }
-    .sidebar-footer {
-      padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08);
-    }
-    .settings-btn {
-      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-      color: rgba(255,255,255,0.5); cursor: pointer; font-size: 13px;
-      border-radius: 8px; transition: all 0.2s;
-    }
-    .settings-btn:hover { color: #fff; background: var(--sidebar-hover); }
+#content { flex: 1; padding: 24px; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
 
-    /* ===== Main Content ===== */
-    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .topbar {
-      height: 64px; background: #fff; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; padding: 0 24px; gap: 16px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-    }
-    .hamburger { display: none; background: none; border: none; cursor: pointer; font-size: 20px; padding: 4px; }
-    .topbar-title { font-size: 18px; font-weight: 700; color: var(--text); flex: 1; }
-    .sync-btn {
-      padding: 8px 16px; background: var(--accent); color: #fff;
-      border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
-      cursor: pointer; display: flex; align-items: center; gap: 6px;
-      transition: background 0.2s;
-    }
-    .sync-btn:hover { background: var(--accent-dark); }
-    .sync-btn.syncing { opacity: 0.7; pointer-events: none; }
-    .content { flex: 1; overflow-y: auto; padding: 24px; }
+/* Cards */
+.card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 20px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.kpi-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 18px 20px; }
+.kpi-card .kpi-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+.kpi-card .kpi-value { font-size: 28px; font-weight: 700; color: var(--text-primary); }
+.kpi-card .kpi-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.kpi-accent { border-left: 4px solid var(--accent); }
+.kpi-red { border-left: 4px solid var(--red); }
+.kpi-orange { border-left: 4px solid var(--orange); }
+.kpi-green { border-left: 4px solid var(--green); }
 
-    /* ===== Toast ===== */
-    #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
-    .toast {
-      padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 500;
-      color: #fff; box-shadow: var(--shadow-lg); animation: slideIn 0.3s ease;
-      display: flex; align-items: center; gap: 8px; min-width: 200px;
-    }
-    .toast.success { background: var(--success); }
-    .toast.error { background: var(--danger); }
-    .toast.info { background: var(--accent); }
-    @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+/* Toolbar */
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.toolbar input[type=text], .toolbar select { height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; color: var(--text-primary); outline: none; }
+.toolbar input[type=text]:focus, .toolbar select:focus { border-color: var(--accent); }
+.toolbar input[type=text] { width: 220px; }
+.btn { height: 36px; padding: 0 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-light); }
+.btn-secondary { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-secondary); }
+.btn-secondary:hover { background: var(--content-bg); }
+.btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
 
-    /* ===== Loading Overlay ===== */
-    .loading-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.7);
-      z-index: 500; align-items: center; justify-content: center; flex-direction: column; gap: 12px;
-    }
-    .loading-overlay.show { display: flex; }
-    .spinner {
-      width: 40px; height: 40px; border: 4px solid var(--border);
-      border-top-color: var(--accent); border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+/* Upload zone */
+.upload-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; margin-bottom: 20px; }
+.upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(79,110,247,.04); }
+.upload-zone .upload-icon { font-size: 40px; margin-bottom: 10px; }
+.upload-zone p { color: var(--text-secondary); font-size: 14px; }
+.upload-zone strong { color: var(--accent); }
+.upload-zone input { display: none; }
 
-    /* ===== Cards & Grids ===== */
-    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
-    .card-sm { padding: 16px; }
-    .kpi-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .kpi-value { font-size: 28px; font-weight: 800; color: var(--text); }
-    .kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-    .kpi-icon { font-size: 24px; margin-bottom: 8px; }
+/* Table */
+.table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); background: var(--card-bg); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { background: #f9fafb; padding: 10px 12px; text-align: left; font-weight: 600; color: var(--text-secondary); white-space: nowrap; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #f9fafb; }
+tbody td { padding: 9px 12px; white-space: nowrap; }
 
-    /* ===== Buttons ===== */
-    .btn { padding: 9px 18px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: var(--accent-dark); }
-    .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { background: var(--border); }
-    .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
-    .btn-danger:hover { background: #fee2e2; }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
+/* Status badges */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.badge-red { background: #fee2e2; color: #dc2626; }
+.badge-orange { background: #ffedd5; color: #ea580c; }
+.badge-green { background: #dcfce7; color: #16a34a; }
+.badge-gray { background: #f3f4f6; color: #6b7280; }
+.badge-blue { background: #eff6ff; color: #2563eb; }
 
-    /* ===== Table ===== */
-    .table-wrapper { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: #f8f9ff; padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
-    td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #f8f9ff; }
+/* Status select in table */
+.status-select { border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; font-size: 12px; cursor: pointer; background: #fff; }
 
-    /* ===== Badges ===== */
-    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-    .badge-red { background: #fef2f2; color: var(--danger); }
-    .badge-orange { background: #fff7ed; color: #ea580c; }
-    .badge-green { background: #ecfdf5; color: var(--success); }
-    .badge-blue { background: #eff6ff; color: #2563eb; }
-    .badge-purple { background: #faf5ff; color: #7c3aed; }
-    .badge-gray { background: #f9fafb; color: var(--text-muted); border: 1px solid var(--border); }
+/* Pagination */
+.pagination { display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+.page-btn { height: 32px; min-width: 32px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--card-bg); cursor: pointer; font-size: 13px; }
+.page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.page-btn:hover:not(.active) { background: var(--content-bg); }
+.page-info { font-size: 13px; color: var(--text-secondary); }
 
-    /* ===== Forms ===== */
-    .form-group { margin-bottom: 16px; }
-    label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-    input, select, textarea {
-      width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
-      border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s;
-      background: #fff; color: var(--text);
-    }
-    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-    textarea { resize: vertical; min-height: 80px; }
+/* Calendar */
+.calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.calendar-header h3 { font-size: 18px; font-weight: 600; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border-radius: 8px; overflow: hidden; }
+.cal-day-header { background: #f9fafb; padding: 8px; text-align: center; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.cal-day { background: var(--card-bg); min-height: 90px; padding: 6px; cursor: pointer; transition: background .15s; }
+.cal-day:hover { background: #f0f4ff; }
+.cal-day.other-month { background: #fafafa; }
+.cal-day.today .day-num { background: var(--accent); color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+.day-num { font-size: 13px; font-weight: 500; margin-bottom: 4px; display: inline-block; }
+.cal-event { font-size: 10px; padding: 2px 5px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.ev-프로모션 { background: #fee2e2; color: #dc2626; }
+.ev-SNS { background: #eff6ff; color: #2563eb; }
+.ev-이메일 { background: #f0fdf4; color: #16a34a; }
+.ev-광고 { background: #fefce8; color: #ca8a04; }
+.ev-기타 { background: #f3f4f6; color: #6b7280; }
 
-    /* ===== Modal ===== */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-      z-index: 1000; align-items: center; justify-content: center; padding: 16px;
-    }
-    .modal-overlay.show { display: flex; }
-    .modal {
-      background: #fff; border-radius: 16px; padding: 28px; width: 100%;
-      max-width: 500px; max-height: 90vh; overflow-y: auto;
-      box-shadow: var(--shadow-lg); animation: modalIn 0.2s ease;
-    }
-    @keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-    .modal-header h3 { font-size: 18px; font-weight: 700; }
-    .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); padding: 4px; }
-    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal { background: var(--card-bg); border-radius: 16px; padding: 28px; width: 100%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+.modal h3 { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary); }
+.form-group input, .form-group select, .form-group textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 14px; outline: none; background: #fff; color: var(--text-primary); font-family: inherit; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
 
-    /* ===== Section Header ===== */
-    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
-    .section-header h2 { font-size: 20px; font-weight: 700; }
+/* Settings */
+.settings-form { max-width: 560px; }
+.settings-form .form-group input { font-family: monospace; font-size: 13px; }
 
-    /* ===== Calendar ===== */
-    .calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
-    .calendar-nav { display: flex; align-items: center; gap: 12px; }
-    .cal-btn { background: none; border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
-    .cal-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; }
-    .cal-day-header { background: #f8f9ff; padding: 10px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-    .cal-day {
-      background: #fff; padding: 8px; min-height: 90px; cursor: pointer;
-      transition: background 0.15s; position: relative;
-    }
-    .cal-day:hover { background: #f8f9ff; }
-    .cal-day.other-month { background: #fafafa; }
-    .cal-day.other-month .day-num { color: #d1d5db; }
-    .cal-day.today { background: #eff6ff; }
-    .cal-day.today .day-num { background: var(--accent); color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
-    .day-num { font-size: 13px; font-weight: 600; margin-bottom: 4px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
-    .cal-event { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+/* Todo */
+.todo-list { list-style: none; }
+.todo-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); transition: background .15s; }
+.todo-item:last-child { border-bottom: none; }
+.todo-item:hover { background: #f9fafb; }
+.todo-item input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+.todo-item.done .todo-text { text-decoration: line-through; color: var(--text-secondary); }
+.todo-text { flex: 1; font-size: 14px; }
+.todo-meta { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+.priority-높음 { color: var(--red); }
+.priority-중간 { color: var(--orange); }
+.priority-낮음 { color: var(--green); }
+.notes-area { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 14px; font-family: inherit; outline: none; resize: vertical; min-height: 160px; }
+.notes-area:focus { border-color: var(--accent); }
 
-    /* ===== Todo ===== */
-    .todo-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
-    .todo-item:last-child { border-bottom: none; }
-    .todo-item:hover { background: #f8f9ff; }
-    .todo-checkbox { width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 5px; cursor: pointer; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-    .todo-checkbox.checked { background: var(--success); border-color: var(--success); }
-    .todo-checkbox.checked::after { content: '✓'; color: #fff; font-size: 11px; font-weight: 700; }
-    .todo-content { flex: 1; }
-    .todo-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-    .todo-title.done { text-decoration: line-through; color: var(--text-muted); }
-    .todo-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .todo-actions { display: flex; gap: 6px; }
+/* Charts */
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+.chart-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 20px; }
+.chart-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--text-secondary); }
 
-    /* ===== Inventory Status Select ===== */
-    .status-select { padding: 4px 8px; border-radius: 6px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; outline: none; }
-    .status-강제품절 { background: #fef2f2; color: var(--danger); }
-    .status-한정 { background: #fff7ed; color: #ea580c; }
-    .status-무제한 { background: #ecfdf5; color: var(--success); }
+/* Responsive */
+@media (max-width: 768px) {
+  #sidebar { transform: translateX(-100%); }
+  #sidebar.open { transform: none; }
+  #main { margin-left: 0; }
+  #hamburger { display: block; }
+  .charts-grid { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .toolbar input[type=text] { width: 150px; }
+}
+#overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 99; }
+#overlay.show { display: block; }
 
-    /* ===== Upload Zone ===== */
-    .upload-zone {
-      border: 2px dashed var(--border); border-radius: var(--radius);
-      padding: 40px 20px; text-align: center; cursor: pointer;
-      transition: all 0.2s; background: #fafbff; margin-bottom: 20px;
-    }
-    .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); background: #eff3ff; }
-    .upload-zone .upload-icon { font-size: 40px; margin-bottom: 12px; }
-    .upload-zone p { color: var(--text-muted); font-size: 14px; }
-    .upload-zone strong { color: var(--accent); }
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; background: #1a1f3e; color: #fff; padding: 12px 20px; border-radius: 10px; font-size: 14px; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,.3); transform: translateY(20px); opacity: 0; transition: all .3s; }
+.toast.show { transform: none; opacity: 1; }
 
-    /* ===== Sub Tabs ===== */
-    .sub-tabs { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: 10px; margin-bottom: 20px; }
-    .sub-tab { flex: 1; padding: 8px 12px; border: none; background: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-muted); transition: all 0.2s; text-align: center; }
-    .sub-tab.active { background: #fff; color: var(--accent); box-shadow: var(--shadow); }
-
-    /* ===== Note card ===== */
-    .note-card { background: #fff; border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); border-left: 4px solid var(--accent); margin-bottom: 12px; }
-    .note-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
-    .note-card p { font-size: 13px; color: var(--text-muted); line-height: 1.6; white-space: pre-wrap; }
-    .note-card .note-meta { font-size: 11px; color: #d1d5db; margin-top: 10px; }
-
-    /* ===== Charts ===== */
-    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; margin-top: 24px; }
-    .chart-card { background: #fff; border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
-    .chart-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
-    .chart-wrapper { position: relative; height: 220px; }
-
-    /* ===== Responsive ===== */
-    @media (max-width: 768px) {
-      .sidebar { position: fixed; left: -240px; top: 0; height: 100%; transition: left 0.3s; z-index: 200; }
-      .sidebar.open { left: 0; }
-      .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 199; }
-      .sidebar-overlay.show { display: block; }
-      .hamburger { display: block; }
-      .cards-grid { grid-template-columns: repeat(2, 1fr); }
-      .content { padding: 16px; }
-      .cal-event { display: none; }
-      .cal-day { min-height: 50px; }
-      .setup-card { padding: 32px 24px; }
-    }
-  </style>
+/* Setup screen */
+#setup-screen { position: fixed; inset: 0; background: var(--sidebar-bg); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+#setup-screen .setup-box { background: var(--card-bg); border-radius: 20px; padding: 40px; width: 100%; max-width: 480px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+#setup-screen .logo { font-size: 48px; margin-bottom: 16px; }
+#setup-screen h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+#setup-screen p { color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; }
+#setup-screen input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; font-size: 14px; outline: none; margin-bottom: 12px; font-family: monospace; }
+#setup-screen input:focus { border-color: var(--accent); }
+.skip-link { font-size: 13px; color: var(--text-secondary); cursor: pointer; text-decoration: underline; display: block; margin-top: 12px; }
+</style>
 </head>
 <body>
 
-<!-- ===== Setup Screen ===== -->
+<!-- Setup Screen -->
 <div id="setup-screen">
-  <div class="setup-card">
-    <div class="setup-icon">⚙️</div>
-    <h1>초기 설정</h1>
-    <p>Google Apps Script 웹 앱 URL을 입력하면<br>Google Sheets와 연동하여 데이터를 저장합니다.</p>
-    <input type="url" id="script-url-input" class="setup-input"
-      placeholder="https://script.google.com/macros/s/.../exec" />
-    <button class="setup-btn" onclick="saveSetup()">🚀 시작하기</button>
-    <div class="setup-tips">
-      <h3>📋 설정 방법</h3>
-      <ul>
-        <li>Google Sheets에서 확장 프로그램 → Apps Script를 여세요</li>
-        <li>apps_script.js 코드를 붙여넣고 저장하세요</li>
-        <li>배포 → 새 배포 → 웹 앱으로 배포하세요</li>
-        <li>액세스를 "모든 사용자"로 설정하고 URL을 복사하세요</li>
-      </ul>
+  <div class="setup-box">
+    <div class="logo">📊</div>
+    <h1>MD/마케팅 대시보드</h1>
+    <p>Google Apps Script URL을 입력하여 시작하세요</p>
+    <input type="text" id="script-url-input" placeholder="https://script.google.com/macros/s/..." />
+    <button class="btn btn-primary" style="width:100%;justify-content:center;height:44px;font-size:15px;" onclick="saveScriptUrl()">시작하기</button>
+    <span class="skip-link" onclick="skipSetup()">나중에 설정 (로컬 저장만 사용)</span>
+  </div>
+</div>
+
+<!-- Sidebar overlay -->
+<div id="overlay" onclick="closeSidebar()"></div>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div id="sidebar-logo">
+    <h1>📊 MD Dashboard</h1>
+    <p>마케팅 관리 시스템</p>
+  </div>
+  <nav>
+    <div class="nav-item active" onclick="switchTab('inventory')" data-tab="inventory">
+      <span class="icon">📦</span> 재고관리
+    </div>
+    <div class="nav-item" onclick="switchTab('products')" data-tab="products">
+      <span class="icon">🛍️</span> 상품관리
+    </div>
+    <div class="nav-item" onclick="switchTab('calendar')" data-tab="calendar">
+      <span class="icon">📅</span> 마케팅 캘린더
+    </div>
+    <div class="nav-item" onclick="switchTab('sales')" data-tab="sales">
+      <span class="icon">💰</span> 매출 대시보드
+    </div>
+    <div class="nav-item" onclick="switchTab('todos')" data-tab="todos">
+      <span class="icon">✅</span> 할 일 / 메모
+    </div>
+  </nav>
+  <div id="sidebar-footer">v1.0 · MD/마케팅 관리</div>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <div id="topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button id="hamburger" onclick="toggleSidebar()">☰</button>
+      <h2 id="topbar-title">재고관리</h2>
+    </div>
+    <div id="topbar-right">
+      <button class="btn btn-secondary" id="btn-settings" onclick="openSettings()">⚙️ 설정</button>
+    </div>
+  </div>
+  <div id="content">
+
+    <!-- ===================== 재고관리 ===================== -->
+    <div class="tab-pane active" id="tab-inventory">
+      <div class="upload-zone" id="inv-upload-zone" onclick="document.getElementById('inv-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'inv-upload-zone')" ondrop="handleDrop(event,'inventory')">
+        <div class="upload-icon">📂</div>
+        <p><strong>통합재고현황.xlsx</strong> 파일을 업로드하세요</p>
+        <p style="font-size:12px;margin-top:6px;">클릭하거나 파일을 드래그하세요</p>
+        <input type="file" id="inv-file" accept=".xlsx,.xls" onchange="handleInvFile(event)">
+      </div>
+
+      <div id="inv-kpi" class="kpi-grid" style="display:none;"></div>
+
+      <div class="toolbar" id="inv-toolbar" style="display:none;">
+        <input type="text" id="inv-search" placeholder="SKU, 상품명 검색..." oninput="filterInventory()">
+        <select id="inv-cat" onchange="filterInventory()">
+          <option value="">전체 카테고리</option>
+          <option>선글라스</option><option>안경</option><option>AI안경</option>
+        </select>
+        <select id="inv-status" onchange="filterInventory()">
+          <option value="">전체 상태</option>
+          <option>강제품절</option><option>한정</option><option>무제한</option>
+        </select>
+        <select id="inv-brand" onchange="filterInventory()">
+          <option value="">전체 브랜드</option>
+        </select>
+        <span class="page-info" id="inv-count"></span>
+      </div>
+
+      <div id="inv-table-wrap" class="table-wrap" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th><th>스타일명</th><th>카테고리</th><th>브랜드</th>
+              <th>소비자가</th><th>상태</th><th>창고재고</th><th>매장재고</th><th>자사몰연동</th>
+            </tr>
+          </thead>
+          <tbody id="inv-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="inv-pagination"></div>
+    </div>
+
+    <!-- ===================== 상품관리 ===================== -->
+    <div class="tab-pane" id="tab-products">
+      <div class="upload-zone" id="prod-upload-zone" onclick="document.getElementById('prod-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'prod-upload-zone')" ondrop="handleDrop(event,'products')">
+        <div class="upload-icon">📋</div>
+        <p><strong>CMS 상품 CSV</strong> 파일을 업로드하세요</p>
+        <p style="font-size:12px;margin-top:6px;">클릭하거나 파일을 드래그하세요</p>
+        <input type="file" id="prod-file" accept=".csv" onchange="handleProdFile(event)">
+      </div>
+
+      <div id="prod-kpi" class="kpi-grid" style="display:none;"></div>
+
+      <div class="toolbar" id="prod-toolbar" style="display:none;">
+        <input type="text" id="prod-search" placeholder="상품코드, 상품명 검색..." oninput="filterProducts()">
+        <select id="prod-cat" onchange="filterProducts()">
+          <option value="">전체 카테고리</option>
+          <option>선글라스</option><option>안경</option><option>AI안경</option>
+        </select>
+        <select id="prod-status" onchange="filterProducts()">
+          <option value="">전체 상태</option>
+          <option>판매중</option><option>숨김</option><option>품절</option>
+        </select>
+        <span class="page-info" id="prod-count"></span>
+      </div>
+
+      <div id="prod-table-wrap" class="table-wrap" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th>상품코드</th><th>상품명</th><th>카테고리</th><th>브랜드</th>
+              <th>판매가</th><th>상태</th><th>조회수</th><th>주문수</th><th>판매수</th>
+            </tr>
+          </thead>
+          <tbody id="prod-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="prod-pagination"></div>
+    </div>
+
+    <!-- ===================== 마케팅 캘린더 ===================== -->
+    <div class="tab-pane" id="tab-calendar">
+      <div class="card">
+        <div class="calendar-header">
+          <button class="btn btn-secondary btn-sm" onclick="changeMonth(-1)">‹ 이전</button>
+          <h3 id="cal-title"></h3>
+          <button class="btn btn-secondary btn-sm" onclick="changeMonth(1)">다음 ›</button>
+        </div>
+        <div class="calendar-grid" id="cal-grid"></div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;" id="event-legend">
+        <span class="badge ev-프로모션" style="padding:4px 10px;">프로모션</span>
+        <span class="badge ev-SNS" style="padding:4px 10px;">SNS</span>
+        <span class="badge ev-이메일" style="padding:4px 10px;">이메일</span>
+        <span class="badge ev-광고" style="padding:4px 10px;">광고</span>
+        <span class="badge ev-기타" style="padding:4px 10px;">기타</span>
+      </div>
+    </div>
+
+    <!-- ===================== 매출 대시보드 ===================== -->
+    <div class="tab-pane" id="tab-sales">
+      <div class="kpi-grid" id="sales-kpi"></div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h4>월별 매출</h4>
+          <canvas id="chart-bar" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <h4>카테고리별 매출</h4>
+          <canvas id="chart-donut" height="200"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <h3 style="font-size:16px;font-weight:600;">매출 입력</h3>
+          <button class="btn btn-primary btn-sm" onclick="openSalesModal()">+ 매출 추가</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>날짜</th><th>카테고리</th><th>브랜드</th><th>매출액</th><th>메모</th><th></th></tr></thead>
+            <tbody id="sales-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 할 일 / 메모 ===================== -->
+    <div class="tab-pane" id="tab-todos">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h3 style="font-size:16px;font-weight:600;">할 일 목록</h3>
+            <button class="btn btn-primary btn-sm" onclick="openTodoModal()">+ 추가</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <select id="todo-filter" onchange="renderTodos()" style="height:30px;padding:0 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+              <option value="">전체</option>
+              <option>높음</option><option>중간</option><option>낮음</option>
+            </select>
+          </div>
+          <ul class="todo-list" id="todo-list"></ul>
+        </div>
+        <div class="card">
+          <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;">업무 메모</h3>
+          <textarea class="notes-area" id="notes-area" placeholder="업무 메모를 입력하세요..." oninput="saveNotes()"></textarea>
+          <p style="font-size:11px;color:var(--text-secondary);margin-top:8px;">자동 저장됩니다</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal: Event -->
+<div class="modal-overlay" id="event-modal" style="display:none;">
+  <div class="modal">
+    <h3 id="event-modal-title">이벤트 추가</h3>
+    <div class="form-group">
+      <label>날짜</label>
+      <input type="date" id="ev-date">
+    </div>
+    <div class="form-group">
+      <label>유형</label>
+      <select id="ev-type">
+        <option>프로모션</option><option>SNS</option><option>이메일</option><option>광고</option><option>기타</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>제목</label>
+      <input type="text" id="ev-title" placeholder="이벤트 제목">
+    </div>
+    <div class="form-group">
+      <label>내용</label>
+      <textarea id="ev-content" placeholder="이벤트 내용"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('event-modal')">취소</button>
+      <button id="ev-delete-btn" class="btn" style="background:#fee2e2;color:#dc2626;display:none;" onclick="deleteEvent()">삭제</button>
+      <button class="btn btn-primary" onclick="saveEvent()">저장</button>
     </div>
   </div>
 </div>
 
-<!-- ===== Main App ===== -->
-<div id="app">
-  <div class="layout">
-    <!-- Sidebar Overlay (mobile) -->
-    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
-
-    <!-- Sidebar -->
-    <nav class="sidebar" id="sidebar">
-      <div class="sidebar-logo">
-        <h2>📊 MD Manager</h2>
-        <span>마케팅 관리 시스템</span>
-      </div>
-      <div class="sidebar-nav">
-        <div class="nav-item active" data-tab="inventory" onclick="switchTab('inventory', this)">
-          <span class="nav-icon">📦</span> 재고관리
-        </div>
-        <div class="nav-item" data-tab="products" onclick="switchTab('products', this)">
-          <span class="nav-icon">🏷️</span> 상품관리
-        </div>
-        <div class="nav-item" data-tab="calendar" onclick="switchTab('calendar', this)">
-          <span class="nav-icon">📅</span> 마케팅 캘린더
-        </div>
-        <div class="nav-item" data-tab="dashboard" onclick="switchTab('dashboard', this)">
-          <span class="nav-icon">📈</span> 매출 대시보드
-        </div>
-        <div class="nav-item" data-tab="tasks" onclick="switchTab('tasks', this)">
-          <span class="nav-icon">✅</span> 할 일 / 메모
-        </div>
-      </div>
-      <div class="sidebar-footer">
-        <div class="settings-btn" onclick="resetSetup()">
-          <span>⚙️</span> URL 재설정
-        </div>
-      </div>
-    </nav>
-
-    <!-- Main -->
-    <div class="main">
-      <div class="topbar">
-        <button class="hamburger" onclick="toggleSidebar()">☰</button>
-        <div class="topbar-title" id="topbar-title">재고관리</div>
-        <button class="sync-btn" id="sync-btn" onclick="syncCurrentTab()">
-          <span>🔄</span> 동기화
-        </button>
-      </div>
-      <div class="content" id="content"></div>
+<!-- Modal: Sales -->
+<div class="modal-overlay" id="sales-modal" style="display:none;">
+  <div class="modal">
+    <h3>매출 입력</h3>
+    <div class="form-group">
+      <label>날짜</label>
+      <input type="date" id="sal-date">
+    </div>
+    <div class="form-group">
+      <label>카테고리</label>
+      <select id="sal-cat">
+        <option>선글라스</option><option>안경</option><option>AI안경</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>브랜드</label>
+      <input type="text" id="sal-brand" placeholder="브랜드명">
+    </div>
+    <div class="form-group">
+      <label>매출액 (원)</label>
+      <input type="number" id="sal-amount" placeholder="0" min="0">
+    </div>
+    <div class="form-group">
+      <label>메모</label>
+      <input type="text" id="sal-memo" placeholder="메모">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('sales-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveSalesEntry()">저장</button>
     </div>
   </div>
 </div>
 
-<!-- Loading Overlay -->
-<div class="loading-overlay" id="loading">
-  <div class="spinner"></div>
-  <span style="font-size:14px;color:#666;">불러오는 중...</span>
+<!-- Modal: Todo -->
+<div class="modal-overlay" id="todo-modal" style="display:none;">
+  <div class="modal">
+    <h3>할 일 추가</h3>
+    <div class="form-group">
+      <label>내용</label>
+      <input type="text" id="todo-text" placeholder="할 일을 입력하세요">
+    </div>
+    <div class="form-group">
+      <label>우선순위</label>
+      <select id="todo-priority">
+        <option>높음</option><option>중간</option><option>낮음</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>마감일</label>
+      <input type="date" id="todo-due">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('todo-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveTodo()">저장</button>
+    </div>
+  </div>
 </div>
 
-<!-- Toast Container -->
-<div id="toast-container"></div>
-
-<!-- Modal -->
-<div class="modal-overlay" id="modal-overlay">
-  <div class="modal" id="modal-content"></div>
+<!-- Modal: Settings -->
+<div class="modal-overlay" id="settings-modal" style="display:none;">
+  <div class="modal">
+    <h3>⚙️ 설정</h3>
+    <div class="settings-form">
+      <div class="form-group">
+        <label>Google Apps Script URL</label>
+        <input type="text" id="settings-url" placeholder="https://script.google.com/macros/s/...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('settings-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveSettings()">저장</button>
+    </div>
+  </div>
 </div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
 
 <script>
 // ============================================================
-//  GLOBAL STATE
+// STATE
 // ============================================================
-let SCRIPT_URL = '';
-let currentTab = 'inventory';
+let SCRIPT_URL = localStorage.getItem('scriptUrl') || '';
+let invData = []; // parsed inventory rows
+let invFiltered = [];
+let invPage = 1;
+const INV_PER_PAGE = 100;
 
-// In-memory data store (also cached in localStorage for offline fallback)
-const store = {
-  재고: [],
-  상품: [],
-  캘린더: [],
-  매출: [],
-  할일: [],
-  메모: []
-};
+let prodData = [];
+let prodFiltered = [];
+let prodPage = 1;
+const PROD_PER_PAGE = 100;
+
+let calYear, calMonth;
+let calEvents = JSON.parse(localStorage.getItem('calEvents') || '[]');
+let editingEventIdx = null;
+
+let salesData = JSON.parse(localStorage.getItem('salesData') || '[]');
+let todosData = JSON.parse(localStorage.getItem('todosData') || '[]');
+let notesData = localStorage.getItem('notesData') || '';
+
+let barChart = null, donutChart = null;
 
 // ============================================================
-//  INIT
+// SETUP
 // ============================================================
-window.addEventListener('DOMContentLoaded', () => {
-  SCRIPT_URL = localStorage.getItem('md_script_url') || '';
-  if (SCRIPT_URL) {
-    launchApp();
-  }
-});
-
-function saveSetup() {
+function saveScriptUrl() {
   const url = document.getElementById('script-url-input').value.trim();
-  if (!url.startsWith('https://script.google.com')) {
-    showToast('올바른 Apps Script URL을 입력하세요.', 'error');
-    return;
-  }
   SCRIPT_URL = url;
-  localStorage.setItem('md_script_url', url);
-  launchApp();
-}
-
-function launchApp() {
+  localStorage.setItem('scriptUrl', url);
   document.getElementById('setup-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  loadLocalCache();
-  renderTab('inventory');
-  syncAll();
+  init();
 }
-
-function resetSetup() {
-  if (!confirm('URL 설정을 초기화할까요?')) return;
-  localStorage.removeItem('md_script_url');
-  SCRIPT_URL = '';
-  document.getElementById('setup-screen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
+function skipSetup() {
+  document.getElementById('setup-screen').style.display = 'none';
+  init();
 }
-
-// ============================================================
-//  LOCAL CACHE (offline fallback)
-// ============================================================
-function saveLocalCache() {
-  try { localStorage.setItem('md_cache', JSON.stringify(store)); } catch(e) {}
+function openSettings() {
+  document.getElementById('settings-url').value = SCRIPT_URL;
+  document.getElementById('settings-modal').style.display = 'flex';
 }
-
-function loadLocalCache() {
-  try {
-    const cached = JSON.parse(localStorage.getItem('md_cache') || '{}');
-    Object.keys(store).forEach(k => { if (cached[k]) store[k] = cached[k]; });
-  } catch(e) {}
+function saveSettings() {
+  SCRIPT_URL = document.getElementById('settings-url').value.trim();
+  localStorage.setItem('scriptUrl', SCRIPT_URL);
+  closeModal('settings-modal');
+  showToast('설정이 저장되었습니다.');
 }
 
 // ============================================================
-//  API CALLS
+// INIT
 // ============================================================
-async function apiGet(sheet) {
-  const url = `${SCRIPT_URL}?action=getData&sheet=${encodeURIComponent(sheet)}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  if (json.error) throw new Error(json.error);
-  return json.data || [];
-}
+function init() {
+  const today = new Date();
+  calYear = today.getFullYear();
+  calMonth = today.getMonth();
+  initCalendar();
+  initSales();
+  initTodos();
+  document.getElementById('notes-area').value = notesData;
 
-async function apiPost(action, sheet, data, extra = {}) {
-  const res = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    // Using text/plain to avoid CORS preflight OPTIONS request
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, sheet, data, ...extra })
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  if (json.error) throw new Error(json.error);
-  return json;
-}
-
-async function fetchSheet(sheet) {
-  showLoading(true);
-  try {
-    const data = await apiGet(sheet);
-    store[sheet] = data;
-    saveLocalCache();
-    return data;
-  } catch(e) {
-    showToast(`${sheet} 로드 실패: ${e.message} (캐시 사용)`, 'error');
-    return store[sheet] || [];
-  } finally {
-    showLoading(false);
+  // Load from GSheet if URL set
+  if (SCRIPT_URL) {
+    loadSheetData('캘린더').then(d => { if (d && d.length) { calEvents = d; localStorage.setItem('calEvents', JSON.stringify(calEvents)); renderCalendar(); } }).catch(()=>{});
+    loadSheetData('매출').then(d => { if (d && d.length) { salesData = d; localStorage.setItem('salesData', JSON.stringify(salesData)); initSales(); } }).catch(()=>{});
+    loadSheetData('할일').then(d => { if (d && d.length) { todosData = d; localStorage.setItem('todosData', JSON.stringify(todosData)); renderTodos(); } }).catch(()=>{});
   }
 }
 
-async function saveSheet(sheet, data) {
-  store[sheet] = data;
-  saveLocalCache();
+// ============================================================
+// API
+// ============================================================
+async function loadSheetData(sheet) {
+  if (!SCRIPT_URL) return null;
+  const res = await fetch(`${SCRIPT_URL}?action=getData&sheet=${encodeURIComponent(sheet)}`);
+  const json = await res.json();
+  return json.data || json;
+}
+async function saveSheetData(sheet, data) {
+  if (!SCRIPT_URL) return;
   try {
-    await apiPost('saveData', sheet, data);
-    showToast(`${sheet} 저장 완료 ✓`, 'success');
-  } catch(e) {
-    showToast(`저장 실패 (로컬에 백업됨): ${e.message}`, 'error');
-  }
-}
-
-async function syncAll() {
-  const sheets = ['재고', '상품', '캘린더', '매출', '할일', '메모'];
-  showLoading(true);
-  const syncBtn = document.getElementById('sync-btn');
-  if (syncBtn) syncBtn.classList.add('syncing');
-  let failed = 0;
-  await Promise.all(sheets.map(async s => {
-    try {
-      const data = await apiGet(s);
-      store[s] = data;
-    } catch(e) { failed++; }
-  }));
-  saveLocalCache();
-  renderTab(currentTab);
-  showLoading(false);
-  if (syncBtn) syncBtn.classList.remove('syncing');
-  if (failed === 0) showToast('동기화 완료 ✓', 'success');
-  else showToast(`${failed}개 시트 동기화 실패 (캐시 사용 중)`, 'error');
-}
-
-async function syncCurrentTab() {
-  const sheetMap = { inventory:'재고', products:'상품', calendar:'캘린더', dashboard:'매출', tasks:'할일' };
-  const sheet = sheetMap[currentTab] || '재고';
-  await fetchSheet(sheet);
-  if (currentTab === 'tasks') await fetchSheet('메모');
-  renderTab(currentTab);
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'saveData', sheet, data })
+    });
+  } catch(e) { console.warn('Save failed, using localStorage:', e); }
 }
 
 // ============================================================
-//  NAVIGATION
+// NAVIGATION
 // ============================================================
-const TAB_TITLES = {
-  inventory: '📦 재고관리',
-  products: '🏷️ 상품관리',
-  calendar: '📅 마케팅 캘린더',
-  dashboard: '📈 매출 대시보드',
-  tasks: '✅ 할 일 / 업무 메모'
-};
-
-function switchTab(tab, el) {
+const tabTitles = { inventory:'재고관리', products:'상품관리', calendar:'마케팅 캘린더', sales:'매출 대시보드', todos:'할 일 / 업무 메모' };
+function switchTab(tab) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  if (el) el.classList.add('active');
-  currentTab = tab;
-  document.getElementById('topbar-title').textContent = TAB_TITLES[tab] || '';
-  renderTab(tab);
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelector(`.nav-item[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById('topbar-title').textContent = tabTitles[tab];
   closeSidebar();
+  if (tab === 'calendar') renderCalendar();
+  if (tab === 'sales') renderCharts();
 }
-
-function renderTab(tab) {
-  switch(tab) {
-    case 'inventory':  renderInventory();  break;
-    case 'products':   renderProducts();   break;
-    case 'calendar':   renderCalendar();   break;
-    case 'dashboard':  renderDashboard();  break;
-    case 'tasks':      renderTasks();      break;
-  }
-}
-
-// ============================================================
-//  TAB 1: 재고관리
-// ============================================================
-let inventoryData = [];
-
-function renderInventory() {
-  inventoryData = (store['재고'] || []);
-  const sunglasses = inventoryData.filter(r => r.category === '선글라스').length;
-  const eyeglasses = inventoryData.filter(r => r.category === '안경').length;
-  const aiGlasses  = inventoryData.filter(r => r.category === 'AI안경').length;
-  const soldOut    = inventoryData.filter(r => r.status === '강제품절').length;
-
-  document.getElementById('content').innerHTML = `
-    <div class="cards-grid" style="grid-template-columns: repeat(auto-fill, minmax(155px,1fr));">
-      <div class="card card-sm"><div class="kpi-icon">🕶️</div><div class="kpi-label">선글라스</div><div class="kpi-value">${sunglasses}</div><div class="kpi-sub">총 SKU</div></div>
-      <div class="card card-sm"><div class="kpi-icon">👓</div><div class="kpi-label">안경</div><div class="kpi-value">${eyeglasses}</div><div class="kpi-sub">총 SKU</div></div>
-      <div class="card card-sm"><div class="kpi-icon">🤖</div><div class="kpi-label">AI안경</div><div class="kpi-value">${aiGlasses}</div><div class="kpi-sub">총 SKU</div></div>
-      <div class="card card-sm"><div class="kpi-icon">🚫</div><div class="kpi-label">강제품절</div><div class="kpi-value" style="color:var(--danger)">${soldOut}</div><div class="kpi-sub">품절 처리 중</div></div>
-    </div>
-
-    <div class="section-header">
-      <h2>재고 목록</h2>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <label class="btn btn-secondary btn-sm" for="xlsx-upload" style="cursor:pointer;">📤 엑셀 업로드</label>
-        <input type="file" id="xlsx-upload" accept=".xlsx,.xls" style="display:none" onchange="handleXlsxUpload(event)" />
-        <button class="btn btn-primary btn-sm" onclick="openAddInventoryModal()">+ 직접 추가</button>
-      </div>
-    </div>
-
-    <div class="upload-zone" id="upload-zone"
-      ondragover="event.preventDefault();this.classList.add('drag-over')"
-      ondragleave="this.classList.remove('drag-over')"
-      ondrop="handleXlsxDrop(event)"
-      onclick="document.getElementById('xlsx-upload').click()">
-      <div class="upload-icon">📊</div>
-      <p><strong>엑셀 파일을 드래그하거나 클릭</strong>하여 업로드하세요</p>
-      <p style="font-size:12px;margin-top:6px;">상품코드, 상품명, 카테고리, 수량 컬럼이 포함된 .xlsx 파일</p>
-    </div>
-
-    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-      <select id="cat-filter" onchange="filterInventory()" style="width:auto;">
-        <option value="">전체 카테고리</option>
-        <option value="선글라스">🕶️ 선글라스</option>
-        <option value="안경">👓 안경</option>
-        <option value="AI안경">🤖 AI안경</option>
-      </select>
-      <select id="status-filter" onchange="filterInventory()" style="width:auto;">
-        <option value="">전체 상태</option>
-        <option value="강제품절">🔴 강제품절</option>
-        <option value="한정">🟠 한정</option>
-        <option value="무제한">🟢 무제한</option>
-      </select>
-      <input type="text" id="inv-search" placeholder="🔍 상품명 검색..." style="flex:1;min-width:120px;" oninput="filterInventory()" />
-    </div>
-
-    <div class="table-wrapper">
-      <table>
-        <thead><tr><th>상품코드</th><th>상품명</th><th>카테고리</th><th>수량</th><th>상태</th><th>메모</th><th>작업</th></tr></thead>
-        <tbody id="inventory-tbody"></tbody>
-      </table>
-    </div>
-  `;
-  renderInventoryRows(inventoryData);
-}
-
-function filterInventory() {
-  const cat    = document.getElementById('cat-filter').value;
-  const status = document.getElementById('status-filter').value;
-  const search = document.getElementById('inv-search').value.toLowerCase();
-  const filtered = inventoryData.filter(r =>
-    (!cat    || r.category === cat) &&
-    (!status || r.status   === status) &&
-    (!search || (r.name||'').toLowerCase().includes(search))
-  );
-  renderInventoryRows(filtered);
-}
-
-function renderInventoryRows(rows) {
-  const tbody = document.getElementById('inventory-tbody');
-  if (!tbody) return;
-  if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted);">재고 데이터가 없습니다. 엑셀 파일을 업로드하거나 직접 추가하세요.</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = rows.map(r => {
-    const idx = inventoryData.indexOf(r);
-    return `<tr>
-      <td><code style="font-size:12px;background:#f3f4f6;padding:2px 6px;border-radius:4px;">${r.code||'-'}</code></td>
-      <td><strong>${r.name||'-'}</strong></td>
-      <td>${getCategoryBadge(r.category)}</td>
-      <td>${r.qty!=null?r.qty:'-'}</td>
-      <td>
-        <select class="status-select status-${r.status||'무제한'}"
-          onchange="updateInventoryStatus(${idx},this.value,this)">
-          <option value="강제품절" ${r.status==='강제품절'?'selected':''}>🔴 강제품절</option>
-          <option value="한정" ${r.status==='한정'?'selected':''}>🟠 한정</option>
-          <option value="무제한" ${!r.status||r.status==='무제한'?'selected':''}>🟢 무제한</option>
-        </select>
-      </td>
-      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.memo||''}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="deleteInventoryRow(${idx})">삭제</button></td>
-    </tr>`;
-  }).join('');
-}
-
-function getCategoryBadge(cat) {
-  const map = { '선글라스':'badge-blue', '안경':'badge-purple', 'AI안경':'badge-green' };
-  return `<span class="badge ${map[cat]||'badge-gray'}">${cat||'기타'}</span>`;
-}
-
-function classifyCategory(name='') {
-  const n = (name||'').toLowerCase();
-  if (n.includes('ai') || n.includes('스마트')) return 'AI안경';
-  if (n.includes('선글') || n.includes('sunglass')) return '선글라스';
-  return '안경';
-}
-
-function handleXlsxUpload(e) {
-  const file = e.target.files[0];
-  if (file) parseXlsx(file);
-  e.target.value = '';
-}
-
-function handleXlsxDrop(e) {
-  e.preventDefault();
-  document.getElementById('upload-zone').classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) parseXlsx(file);
-}
-
-function parseXlsx(file) {
-  showLoading(true);
-  const reader = new FileReader();
-  reader.onload = function(ev) {
-    try {
-      const wb = XLSX.read(ev.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-      const mapped = rows.map(r => ({
-        code:     r['상품코드'] || r['code']     || r['Code']     || '',
-        name:     r['상품명']   || r['name']     || r['Name']     || '',
-        category: r['카테고리'] || r['category'] || classifyCategory(r['상품명']||r['name']||''),
-        qty:      Number(r['수량'] || r['qty'] || r['재고'] || 0),
-        status:   r['상태']    || '무제한',
-        memo:     r['메모']    || r['memo']      || ''
-      }));
-      inventoryData = [...inventoryData, ...mapped];
-      saveSheet('재고', inventoryData);
-      renderInventory();
-      showToast(`${mapped.length}개 상품을 불러왔습니다.`, 'success');
-    } catch(err) {
-      showToast('엑셀 파싱 실패: ' + err.message, 'error');
-    } finally {
-      showLoading(false);
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function updateInventoryStatus(idx, status, selectEl) {
-  if (idx < 0 || idx >= inventoryData.length) return;
-  inventoryData[idx].status = status;
-  selectEl.className = `status-select status-${status}`;
-  saveSheet('재고', inventoryData);
-}
-
-function deleteInventoryRow(idx) {
-  if (!confirm('이 항목을 삭제할까요?')) return;
-  inventoryData.splice(idx, 1);
-  saveSheet('재고', inventoryData);
-  renderInventory();
-}
-
-function openAddInventoryModal() {
-  showModal(`
-    <div class="modal-header">
-      <h3>📦 재고 항목 추가</h3>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="form-group"><label>상품코드</label><input id="m-code" placeholder="예: SG-001" /></div>
-    <div class="form-group"><label>상품명 *</label><input id="m-name" placeholder="상품명 입력" /></div>
-    <div class="form-group"><label>카테고리</label>
-      <select id="m-cat"><option>선글라스</option><option>안경</option><option>AI안경</option></select>
-    </div>
-    <div class="form-group"><label>수량</label><input id="m-qty" type="number" value="0" /></div>
-    <div class="form-group"><label>상태</label>
-      <select id="m-status"><option>무제한</option><option>한정</option><option>강제품절</option></select>
-    </div>
-    <div class="form-group"><label>메모</label><textarea id="m-memo" placeholder="추가 메모"></textarea></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
-      <button class="btn btn-primary" onclick="addInventoryItem()">추가</button>
-    </div>
-  `);
-}
-
-function addInventoryItem() {
-  const name = document.getElementById('m-name').value.trim();
-  if (!name) { showToast('상품명을 입력하세요.', 'error'); return; }
-  inventoryData.push({
-    code:     document.getElementById('m-code').value.trim(),
-    name,
-    category: document.getElementById('m-cat').value,
-    qty:      parseInt(document.getElementById('m-qty').value)||0,
-    status:   document.getElementById('m-status').value,
-    memo:     document.getElementById('m-memo').value.trim()
-  });
-  saveSheet('재고', inventoryData);
-  closeModal();
-  renderInventory();
-}
-
-// ============================================================
-//  TAB 2: 상품관리
-// ============================================================
-function renderProducts() {
-  const products = store['상품'] || [];
-  document.getElementById('content').innerHTML = `
-    <div class="section-header">
-      <h2>상품 목록 <span style="font-size:14px;color:var(--text-muted);font-weight:400;">(총 ${products.length}개)</span></h2>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <label class="btn btn-secondary btn-sm" for="product-xlsx-upload" style="cursor:pointer;">📤 엑셀 일괄 업로드</label>
-        <input type="file" id="product-xlsx-upload" accept=".xlsx,.xls" style="display:none" onchange="handleProductXlsxUpload(event)" />
-        <button class="btn btn-primary btn-sm" onclick="openProductModal()">+ 상품 추가</button>
-      </div>
-    </div>
-
-    <div class="upload-zone" id="product-upload-zone"
-      ondragover="event.preventDefault();this.classList.add('drag-over')"
-      ondragleave="this.classList.remove('drag-over')"
-      ondrop="handleProductXlsxDrop(event)"
-      onclick="document.getElementById('product-xlsx-upload').click()">
-      <div class="upload-icon">🏷️</div>
-      <p><strong>엑셀 파일을 드래그하거나 클릭</strong>하여 업로드하세요</p>
-      <p style="font-size:12px;margin-top:6px;">상품명, 카테고리, 브랜드, 가격, 상태 컬럼이 포함된 .xlsx 파일</p>
-    </div>
-
-    <div class="table-wrapper">
-      <table>
-        <thead><tr><th>상품명</th><th>카테고리</th><th>브랜드</th><th>가격</th><th>상태</th><th>메모</th><th>작업</th></tr></thead>
-        <tbody>
-          ${products.length === 0
-            ? `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted);">상품이 없습니다. 상품을 추가하세요.</td></tr>`
-            : products.map((p, i) => `
-              <tr>
-                <td><strong>${p.name||'-'}</strong></td>
-                <td>${getCategoryBadge(p.category)}</td>
-                <td>${p.brand||'-'}</td>
-                <td>${p.price ? Number(p.price).toLocaleString()+'원' : '-'}</td>
-                <td><span class="badge ${p.status==='판매중'?'badge-green':p.status==='준비중'?'badge-blue':'badge-red'}">${p.status||'-'}</span></td>
-                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.memo||''}</td>
-                <td style="display:flex;gap:6px;">
-                  <button class="btn btn-secondary btn-sm" onclick="openProductModal(${i})">수정</button>
-                  <button class="btn btn-danger btn-sm" onclick="deleteProduct(${i})">삭제</button>
-                </td>
-              </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function openProductModal(idx) {
-  const products = store['상품'] || [];
-  const p = idx !== undefined ? products[idx] : {};
-  const isEdit = idx !== undefined;
-  showModal(`
-    <div class="modal-header">
-      <h3>${isEdit ? '✏️ 상품 수정' : '🏷️ 상품 추가'}</h3>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="form-group"><label>상품명 *</label><input id="p-name" value="${esc(p.name)}" placeholder="상품명 입력" /></div>
-    <div class="form-group"><label>카테고리</label>
-      <select id="p-cat">
-        ${['선글라스','안경','AI안경','기타'].map(c=>`<option ${p.category===c?'selected':''}>${c}</option>`).join('')}
-      </select></div>
-    <div class="form-group"><label>브랜드</label><input id="p-brand" value="${esc(p.brand)}" placeholder="브랜드명" /></div>
-    <div class="form-group"><label>가격 (원)</label><input id="p-price" type="number" value="${p.price||''}" placeholder="0" /></div>
-    <div class="form-group"><label>상태</label>
-      <select id="p-status">
-        ${['판매중','준비중','판매종료'].map(s=>`<option ${p.status===s?'selected':''}>${s}</option>`).join('')}
-      </select></div>
-    <div class="form-group"><label>메모</label><textarea id="p-memo">${esc(p.memo)}</textarea></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
-      <button class="btn btn-primary" onclick="saveProduct(${isEdit?idx:'undefined'})">${isEdit?'수정':'추가'}</button>
-    </div>
-  `);
-}
-
-function saveProduct(idx) {
-  const name = document.getElementById('p-name').value.trim();
-  if (!name) { showToast('상품명을 입력하세요.', 'error'); return; }
-  const prod = {
-    name,
-    category: document.getElementById('p-cat').value,
-    brand:    document.getElementById('p-brand').value.trim(),
-    price:    parseInt(document.getElementById('p-price').value)||0,
-    status:   document.getElementById('p-status').value,
-    memo:     document.getElementById('p-memo').value.trim()
-  };
-  store['상품'] = store['상품'] || [];
-  if (idx !== undefined) store['상품'][idx] = prod;
-  else store['상품'].push(prod);
-  saveSheet('상품', store['상품']);
-  closeModal();
-  renderProducts();
-}
-
-function deleteProduct(idx) {
-  if (!confirm('이 상품을 삭제할까요?')) return;
-  store['상품'].splice(idx, 1);
-  saveSheet('상품', store['상품']);
-  renderProducts();
-}
-
-function handleProductXlsxUpload(e) {
-  const file = e.target.files[0];
-  if (file) parseProductXlsx(file);
-  e.target.value = '';
-}
-
-function handleProductXlsxDrop(e) {
-  e.preventDefault();
-  document.getElementById('product-upload-zone').classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) parseProductXlsx(file);
-}
-
-function parseProductXlsx(file) {
-  showLoading(true);
-  const reader = new FileReader();
-  reader.onload = function(ev) {
-    try {
-      const wb = XLSX.read(ev.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-      const mapped = rows.map(r => ({
-        name:     r['상품명']   || r['name']     || r['Name']     || '',
-        category: r['카테고리'] || r['category'] || '기타',
-        brand:    r['브랜드']   || r['brand']    || '',
-        price:    Number(r['가격'] || r['price'] || 0),
-        status:   r['상태']    || r['status']   || '판매중',
-        memo:     r['메모']    || r['memo']      || ''
-      })).filter(r => r.name);
-      store['상품'] = [...(store['상품'] || []), ...mapped];
-      saveSheet('상품', store['상품']);
-      renderProducts();
-      showToast(`${mapped.length}개 상품을 불러왔습니다.`, 'success');
-    } catch(err) {
-      showToast('엑셀 파싱 실패: ' + err.message, 'error');
-    } finally {
-      showLoading(false);
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-// ============================================================
-//  TAB 3: 마케팅 캘린더
-// ============================================================
-let calYear = new Date().getFullYear();
-let calMonth = new Date().getMonth();
-
-const EVENT_COLORS = {
-  '프로모션': { bg: '#fee2e2', text: '#dc2626' },
-  'SNS':      { bg: '#e0e7ff', text: '#4338ca' },
-  '이메일':   { bg: '#ecfdf5', text: '#059669' },
-  '광고':     { bg: '#fff7ed', text: '#d97706' },
-  '기타':     { bg: '#f3f4f6', text: '#6b7280' }
-};
-
-function renderCalendar() {
-  document.getElementById('content').innerHTML = `
-    <div class="card" style="padding:20px;">
-      <div class="calendar-header">
-        <div class="calendar-nav">
-          <button class="cal-btn" onclick="prevMonth()">‹ 이전</button>
-          <h2 id="cal-month-title" style="font-size:18px;font-weight:700;min-width:120px;text-align:center;"></h2>
-          <button class="cal-btn" onclick="nextMonth()">다음 ›</button>
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="openEventModal()">+ 일정 추가</button>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-        ${Object.entries(EVENT_COLORS).map(([k,v])=>
-          `<span class="badge" style="background:${v.bg};color:${v.text};">${k}</span>`
-        ).join('')}
-      </div>
-      <div id="cal-grid"></div>
-    </div>
-    <div id="events-list" style="margin-top:20px;"></div>
-  `;
-  drawCalendar();
-}
-
-function drawCalendar() {
-  const title = document.getElementById('cal-month-title');
-  const grid  = document.getElementById('cal-grid');
-  if (!title || !grid) return;
-
-  title.textContent = `${calYear}년 ${calMonth+1}월`;
-
-  const DAY_NAMES = ['일','월','화','수','목','금','토'];
-  const firstDay     = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth  = new Date(calYear, calMonth+1, 0).getDate();
-  const daysInPrev   = new Date(calYear, calMonth, 0).getDate();
-  const today        = new Date();
-  const events       = store['캘린더'] || [];
-
-  let html = `<div class="calendar-grid">`;
-  DAY_NAMES.forEach(d => html += `<div class="cal-day-header">${d}</div>`);
-
-  for (let i = 0; i < firstDay; i++) {
-    html += `<div class="cal-day other-month"><div class="day-num">${daysInPrev - firstDay + i + 1}</div></div>`;
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr  = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dayEvents = events.filter(e => e.date === dateStr);
-    const isToday  = today.getFullYear()===calYear && today.getMonth()===calMonth && today.getDate()===d;
-    html += `<div class="cal-day${isToday?' today':''}" onclick="openEventModal('${dateStr}')">
-      <div class="day-num">${d}</div>
-      ${dayEvents.map(e => {
-        const c = EVENT_COLORS[e.type] || EVENT_COLORS['기타'];
-        return `<div class="cal-event" style="background:${c.bg};color:${c.text};"
-          onclick="event.stopPropagation();editEvent('${e.id}')">${esc(e.title)}</div>`;
-      }).join('')}
-    </div>`;
-  }
-
-  const total = firstDay + daysInMonth;
-  const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
-  for (let d = 1; d <= remaining; d++) {
-    html += `<div class="cal-day other-month"><div class="day-num">${d}</div></div>`;
-  }
-  html += `</div>`;
-  grid.innerHTML = html;
-
-  // Upcoming list
-  const monthStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
-  const upcoming = events
-    .filter(e => (e.date||'').startsWith(monthStr))
-    .sort((a,b) => (a.date||'').localeCompare(b.date||''));
-
-  const listEl = document.getElementById('events-list');
-  if (listEl) {
-    if (!upcoming.length) { listEl.innerHTML = ''; return; }
-    listEl.innerHTML = `<h3 style="font-size:16px;font-weight:700;margin-bottom:12px;">이번 달 일정 (${upcoming.length}개)</h3>` +
-      upcoming.map(e => {
-        const c = EVENT_COLORS[e.type] || EVENT_COLORS['기타'];
-        return `<div class="card card-sm" style="margin-bottom:8px;display:flex;align-items:center;gap:12px;">
-          <span class="badge" style="background:${c.bg};color:${c.text};flex-shrink:0;">${e.type}</span>
-          <div style="flex:1;">
-            <strong>${esc(e.title)}</strong>
-            <div style="font-size:12px;color:var(--text-muted);">${e.date}${e.memo?' — '+esc(e.memo):''}</div>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="editEvent('${e.id}')">수정</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteEvent('${e.id}')">삭제</button>
-        </div>`;
-      }).join('');
-  }
-}
-
-function prevMonth() { if(--calMonth < 0){calMonth=11;calYear--;} drawCalendar(); }
-function nextMonth() { if(++calMonth > 11){calMonth=0;calYear++;} drawCalendar(); }
-
-function openEventModal(date='', editId='') {
-  const ev = editId ? (store['캘린더']||[]).find(e=>e.id===editId)||{} : {};
-  const isEdit = !!editId;
-  showModal(`
-    <div class="modal-header">
-      <h3>📅 일정 ${isEdit?'수정':'추가'}</h3>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="form-group"><label>제목 *</label><input id="ev-title" value="${esc(ev.title)}" placeholder="일정 제목" /></div>
-    <div class="form-group"><label>날짜</label><input id="ev-date" type="date" value="${ev.date||date}" /></div>
-    <div class="form-group"><label>유형</label>
-      <select id="ev-type">
-        ${Object.keys(EVENT_COLORS).map(t=>`<option ${(ev.type||'프로모션')===t?'selected':''}>${t}</option>`).join('')}
-      </select></div>
-    <div class="form-group"><label>메모</label><textarea id="ev-memo">${esc(ev.memo)}</textarea></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
-      <button class="btn btn-primary" onclick="saveEvent('${editId||''}')">${isEdit?'수정':'추가'}</button>
-    </div>
-  `);
-}
-
-function editEvent(id) { openEventModal('', id); }
-
-function saveEvent(editId) {
-  const title = document.getElementById('ev-title').value.trim();
-  if (!title) { showToast('제목을 입력하세요.', 'error'); return; }
-  const ev = {
-    id:    editId || `ev_${Date.now()}`,
-    title,
-    date:  document.getElementById('ev-date').value,
-    type:  document.getElementById('ev-type').value,
-    memo:  document.getElementById('ev-memo').value.trim()
-  };
-  store['캘린더'] = store['캘린더'] || [];
-  if (editId) {
-    const idx = store['캘린더'].findIndex(e=>e.id===editId);
-    if (idx >= 0) store['캘린더'][idx] = ev; else store['캘린더'].push(ev);
-  } else {
-    store['캘린더'].push(ev);
-  }
-  saveSheet('캘린더', store['캘린더']);
-  closeModal();
-  drawCalendar();
-}
-
-function deleteEvent(id) {
-  if (!confirm('이 일정을 삭제할까요?')) return;
-  store['캘린더'] = (store['캘린더']||[]).filter(e=>e.id!==id);
-  saveSheet('캘린더', store['캘린더']);
-  drawCalendar();
-}
-
-// ============================================================
-//  TAB 4: 매출 대시보드
-// ============================================================
-let salesCharts = {};
-
-function renderDashboard() {
-  const sales = store['매출'] || [];
-  const totalRevenue = sales.reduce((s,r)=>s+(Number(r.amount)||0),0);
-  const thisMonth    = new Date().getMonth()+1;
-  const monthRevenue = sales
-    .filter(r => { const d=new Date(r.date||''); return !isNaN(d) && d.getMonth()+1===thisMonth; })
-    .reduce((s,r)=>s+(Number(r.amount)||0),0);
-  const avgMonthly = totalRevenue / Math.max(getMonthCount(sales),1);
-
-  document.getElementById('content').innerHTML = `
-    <div class="section-header">
-      <h2>매출 대시보드</h2>
-      <button class="btn btn-primary btn-sm" onclick="openSalesModal()">+ 매출 입력</button>
-    </div>
-    <div class="cards-grid">
-      <div class="card"><div class="kpi-icon">💰</div><div class="kpi-label">총 매출</div>
-        <div class="kpi-value">${(totalRevenue/10000).toFixed(0)}<span style="font-size:16px;">만원</span></div>
-        <div class="kpi-sub">전체 기간</div></div>
-      <div class="card"><div class="kpi-icon">📆</div><div class="kpi-label">이번 달 매출</div>
-        <div class="kpi-value">${(monthRevenue/10000).toFixed(0)}<span style="font-size:16px;">만원</span></div>
-        <div class="kpi-sub">${thisMonth}월</div></div>
-      <div class="card"><div class="kpi-icon">📦</div><div class="kpi-label">총 거래 건수</div>
-        <div class="kpi-value">${sales.length}</div>
-        <div class="kpi-sub">전체 기간</div></div>
-      <div class="card"><div class="kpi-icon">📊</div><div class="kpi-label">월 평균 매출</div>
-        <div class="kpi-value">${(avgMonthly/10000).toFixed(0)}<span style="font-size:16px;">만원</span></div>
-        <div class="kpi-sub">월 평균</div></div>
-    </div>
-    <div class="charts-grid">
-      <div class="chart-card"><h3>월별 매출 추이</h3><div class="chart-wrapper"><canvas id="monthly-chart"></canvas></div></div>
-      <div class="chart-card"><h3>카테고리별 매출</h3><div class="chart-wrapper"><canvas id="category-chart"></canvas></div></div>
-    </div>
-    <div style="margin-top:24px;">
-      <div class="section-header"><h2>매출 내역</h2></div>
-      <div class="table-wrapper">
-        <table>
-          <thead><tr><th>날짜</th><th>상품명</th><th>카테고리</th><th>수량</th><th>금액</th><th>비고</th><th>작업</th></tr></thead>
-          <tbody>
-            ${sales.length===0
-              ? `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted);">매출 데이터가 없습니다.</td></tr>`
-              : sales.slice().reverse().map((r,ri) => {
-                const idx = sales.length-1-ri;
-                return `<tr>
-                  <td>${r.date||'-'}</td>
-                  <td><strong>${esc(r.product)}</strong></td>
-                  <td>${getCategoryBadge(r.category)}</td>
-                  <td>${r.qty||0}</td>
-                  <td><strong>${Number(r.amount||0).toLocaleString()}원</strong></td>
-                  <td>${esc(r.memo)}</td>
-                  <td>
-                    <button class="btn btn-secondary btn-sm" onclick="openSalesModal(${idx})">수정</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteSales(${idx})">삭제</button>
-                  </td>
-                </tr>`;
-              }).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-  setTimeout(() => drawSalesCharts(sales), 60);
-}
-
-function getMonthCount(sales) {
-  const months = new Set(sales.map(r=>(r.date||'').substring(0,7)).filter(Boolean));
-  return months.size || 1;
-}
-
-function drawSalesCharts(sales) {
-  // Monthly bar chart
-  const monthlyMap = {};
-  sales.forEach(r => {
-    const ym = (r.date||'').substring(0,7);
-    if (ym) monthlyMap[ym] = (monthlyMap[ym]||0) + (Number(r.amount)||0);
-  });
-  const sortedMonths = Object.keys(monthlyMap).sort().slice(-8);
-  const mc = document.getElementById('monthly-chart');
-  if (mc) {
-    if (salesCharts.monthly) salesCharts.monthly.destroy();
-    salesCharts.monthly = new Chart(mc, {
-      type: 'bar',
-      data: {
-        labels: sortedMonths,
-        datasets: [{
-          label: '매출 (원)',
-          data: sortedMonths.map(m => monthlyMap[m]),
-          backgroundColor: 'rgba(79,110,247,0.75)',
-          borderRadius: 6
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { ticks: { callback: v => (v/10000).toFixed(0)+'만' } } }
-      }
-    });
-  }
-
-  // Category doughnut chart
-  const catMap = {};
-  sales.forEach(r => {
-    const c = r.category||'기타';
-    catMap[c] = (catMap[c]||0) + (Number(r.amount)||0);
-  });
-  const cc = document.getElementById('category-chart');
-  if (cc) {
-    if (salesCharts.category) salesCharts.category.destroy();
-    if (!Object.keys(catMap).length) return;
-    salesCharts.category = new Chart(cc, {
-      type: 'doughnut',
-      data: {
-        labels: Object.keys(catMap),
-        datasets: [{
-          data: Object.values(catMap),
-          backgroundColor: ['#4F6EF7','#10b981','#f59e0b','#ef4444','#8b5cf6'],
-          borderWidth: 2, borderColor: '#fff'
-        }]
-      },
-      options: { responsive: true, maintainAspectRatio: false }
-    });
-  }
-}
-
-function openSalesModal(idx) {
-  const sales = store['매출'] || [];
-  const r = idx!==undefined ? sales[idx] : {};
-  const isEdit = idx !== undefined;
-  const today = new Date().toISOString().split('T')[0];
-  showModal(`
-    <div class="modal-header">
-      <h3>💰 매출 ${isEdit?'수정':'입력'}</h3>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="form-group"><label>날짜</label><input id="s-date" type="date" value="${r.date||today}" /></div>
-    <div class="form-group"><label>상품명 *</label><input id="s-product" value="${esc(r.product)}" placeholder="상품명" /></div>
-    <div class="form-group"><label>카테고리</label>
-      <select id="s-cat">
-        ${['선글라스','안경','AI안경','기타'].map(c=>`<option ${(r.category||'선글라스')===c?'selected':''}>${c}</option>`).join('')}
-      </select></div>
-    <div class="form-group"><label>수량</label><input id="s-qty" type="number" value="${r.qty||1}" /></div>
-    <div class="form-group"><label>금액 (원)</label><input id="s-amount" type="number" value="${r.amount||''}" placeholder="0" /></div>
-    <div class="form-group"><label>비고</label><input id="s-memo" value="${esc(r.memo)}" placeholder="메모" /></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
-      <button class="btn btn-primary" onclick="saveSales(${isEdit?idx:'undefined'})">${isEdit?'수정':'저장'}</button>
-    </div>
-  `);
-}
-
-function saveSales(idx) {
-  const product = document.getElementById('s-product').value.trim();
-  if (!product) { showToast('상품명을 입력하세요.', 'error'); return; }
-  const r = {
-    date:     document.getElementById('s-date').value,
-    product,
-    category: document.getElementById('s-cat').value,
-    qty:      parseInt(document.getElementById('s-qty').value)||1,
-    amount:   parseInt(document.getElementById('s-amount').value)||0,
-    memo:     document.getElementById('s-memo').value.trim()
-  };
-  store['매출'] = store['매출'] || [];
-  if (idx!==undefined) store['매출'][idx] = r;
-  else store['매출'].push(r);
-  saveSheet('매출', store['매출']);
-  closeModal();
-  renderDashboard();
-}
-
-function deleteSales(idx) {
-  if (!confirm('이 매출 내역을 삭제할까요?')) return;
-  store['매출'].splice(idx, 1);
-  saveSheet('매출', store['매출']);
-  renderDashboard();
-}
-
-// ============================================================
-//  TAB 5: 할 일 / 업무 메모
-// ============================================================
-let taskSubTab = 'todo';
-
-function renderTasks() {
-  document.getElementById('content').innerHTML = `
-    <div class="sub-tabs">
-      <button class="sub-tab ${taskSubTab==='todo'?'active':''}" onclick="switchTaskTab('todo')">✅ 할 일</button>
-      <button class="sub-tab ${taskSubTab==='memo'?'active':''}" onclick="switchTaskTab('memo')">📝 업무 메모</button>
-    </div>
-    <div id="task-content"></div>
-  `;
-  renderTaskContent();
-}
-
-function switchTaskTab(tab) {
-  taskSubTab = tab;
-  document.querySelectorAll('.sub-tab').forEach((t, i) => {
-    t.classList.toggle('active', (i===0&&tab==='todo')||(i===1&&tab==='memo'));
-  });
-  renderTaskContent();
-}
-
-function renderTaskContent() {
-  const el = document.getElementById('task-content');
-  if (!el) return;
-  if (taskSubTab === 'todo') renderTodoList(el);
-  else renderMemoList(el);
-}
-
-function renderTodoList(container) {
-  const todos   = store['할일'] || [];
-  const pending = todos.filter(t => !t.done);
-  const done    = todos.filter(t =>  t.done);
-
-  container.innerHTML = `
-    <div class="section-header">
-      <h2>할 일 <span style="font-size:14px;color:var(--text-muted);font-weight:400;">(미완료 ${pending.length}개)</span></h2>
-      <button class="btn btn-primary btn-sm" onclick="openTodoModal()">+ 할 일 추가</button>
-    </div>
-    <div class="table-wrapper" style="margin-bottom:20px;">
-      ${pending.length===0
-        ? `<div style="text-align:center;padding:32px;color:var(--text-muted);">할 일이 없습니다! 🎉</div>`
-        : pending.map(t => {
-          const idx = todos.indexOf(t);
-          return `<div class="todo-item">
-            <div class="todo-checkbox" onclick="toggleTodo(${idx})"></div>
-            <div class="todo-content">
-              <div class="todo-title">${esc(t.title)}</div>
-              <div class="todo-meta">
-                <span class="badge ${t.priority==='높음'?'badge-red':t.priority==='중간'?'badge-orange':'badge-gray'}">${t.priority||'낮음'}</span>
-                ${t.due ? `<span style="font-size:12px;color:var(--text-muted);">📅 ${t.due}</span>` : ''}
-                ${t.memo ? `<span style="font-size:12px;color:var(--text-muted);">${esc(t.memo)}</span>` : ''}
-              </div>
-            </div>
-            <div class="todo-actions">
-              <button class="btn btn-secondary btn-sm" onclick="openTodoModal(${idx})">수정</button>
-              <button class="btn btn-danger btn-sm" onclick="deleteTodo(${idx})">삭제</button>
-            </div>
-          </div>`;
-        }).join('')}
-    </div>
-    ${done.length > 0 ? `
-    <details>
-      <summary style="cursor:pointer;font-size:14px;font-weight:600;color:var(--text-muted);margin-bottom:12px;user-select:none;">
-        완료된 항목 (${done.length}개)
-      </summary>
-      <div class="table-wrapper" style="margin-top:10px;">
-        ${done.map(t => {
-          const idx = todos.indexOf(t);
-          return `<div class="todo-item" style="opacity:0.6;">
-            <div class="todo-checkbox checked" onclick="toggleTodo(${idx})"></div>
-            <div class="todo-content"><div class="todo-title done">${esc(t.title)}</div></div>
-            <div class="todo-actions">
-              <button class="btn btn-danger btn-sm" onclick="deleteTodo(${idx})">삭제</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </details>` : ''}
-  `;
-}
-
-function renderMemoList(container) {
-  const memos = store['메모'] || [];
-  container.innerHTML = `
-    <div class="section-header">
-      <h2>업무 메모 <span style="font-size:14px;color:var(--text-muted);font-weight:400;">(총 ${memos.length}개)</span></h2>
-      <button class="btn btn-primary btn-sm" onclick="openMemoModal()">+ 메모 추가</button>
-    </div>
-    ${memos.length===0
-      ? `<div class="card" style="text-align:center;padding:32px;color:var(--text-muted);">메모가 없습니다. 첫 번째 메모를 작성하세요.</div>`
-      : memos.slice().reverse().map((m, ri) => {
-        const idx = memos.length-1-ri;
-        return `<div class="note-card">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-            <h4>${esc(m.title)||'(제목 없음)'}</h4>
-            <div style="display:flex;gap:6px;flex-shrink:0;">
-              <button class="btn btn-secondary btn-sm" onclick="openMemoModal(${idx})">수정</button>
-              <button class="btn btn-danger btn-sm" onclick="deleteMemo(${idx})">삭제</button>
-            </div>
-          </div>
-          <p>${esc(m.content)}</p>
-          <div class="note-meta">${m.date||''}</div>
-        </div>`;
-      }).join('')}
-  `;
-}
-
-function openTodoModal(idx) {
-  const todos = store['할일'] || [];
-  const t = idx!==undefined ? todos[idx] : {};
-  const isEdit = idx !== undefined;
-  showModal(`
-    <div class="modal-header">
-      <h3>${isEdit?'✏️ 할 일 수정':'✅ 할 일 추가'}</h3>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="form-group"><label>제목 *</label><input id="t-title" value="${esc(t.title)}" placeholder="할 일 입력" /></div>
-    <div class="form-group"><label>우선순위</label>
-      <select id="t-priority">
-        ${['높음','중간','낮음'].map(p=>`<option ${(t.priority||'중간')===p?'selected':''}>${p}</option>`).join('')}
-      </select></div>
-    <div class="form-group"><label>마감일</label><input id="t-due" type="date" value="${t.due||''}" /></div>
-    <div class="form-group"><label>메모</label><textarea id="t-memo">${esc(t.memo)}</textarea></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
-      <button class="btn btn-primary" onclick="saveTodo(${isEdit?idx:'undefined'})">${isEdit?'수정':'추가'}</button>
-    </div>
-  `);
-}
-
-function saveTodo(idx) {
-  const title = document.getElementById('t-title').value.trim();
-  if (!title) { showToast('제목을 입력하세요.', 'error'); return; }
-  const t = {
-    title,
-    priority: document.getElementById('t-priority').value,
-    due:      document.getElementById('t-due').value,
-    memo:     document.getElementById('t-memo').value.trim(),
-    done:     idx!==undefined ? (store['할일'][idx].done||false) : false
-  };
-  store['할일'] = store['할일'] || [];
-  if (idx!==undefined) store['할일'][idx] = t;
-  else store['할일'].push(t);
-  saveSheet('할일', store['할일']);
-  closeModal();
-  renderTaskContent();
-}
-
-function toggleTodo(idx) {
-  if (!store['할일']) return;
-  store['할일'][idx].done = !store['할일'][idx].done;
-  saveSheet('할일', store['할일']);
-  renderTaskContent();
-}
-
-function deleteTodo(idx) {
-  if (!confirm('이 항목을 삭제할까요?')) return;
-  store['할일'].splice(idx, 1);
-  saveSheet('할일', store['할일']);
-  renderTaskContent();
-}
-
-function openMemoModal(idx) {
-  const memos = store['메모'] || [];
-  const m = idx!==undefined ? memos[idx] : {};
-  const isEdit = idx !== undefined;
-  showModal(`
-    <div class="modal-header">
-      <h3>${isEdit?'✏️ 메모 수정':'📝 메모 추가'}</h3>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="form-group"><label>제목</label><input id="mn-title" value="${esc(m.title)}" placeholder="메모 제목" /></div>
-    <div class="form-group"><label>내용 *</label><textarea id="mn-content" style="min-height:140px;">${esc(m.content)}</textarea></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
-      <button class="btn btn-primary" onclick="saveMemo(${isEdit?idx:'undefined'})">${isEdit?'수정':'저장'}</button>
-    </div>
-  `);
-}
-
-function saveMemo(idx) {
-  const content = document.getElementById('mn-content').value.trim();
-  if (!content) { showToast('내용을 입력하세요.', 'error'); return; }
-  const m = {
-    title:   document.getElementById('mn-title').value.trim(),
-    content,
-    date:    new Date().toLocaleDateString('ko-KR')
-  };
-  store['메모'] = store['메모'] || [];
-  if (idx!==undefined) store['메모'][idx] = m;
-  else store['메모'].push(m);
-  saveSheet('메모', store['메모']);
-  closeModal();
-  renderTaskContent();
-}
-
-function deleteMemo(idx) {
-  if (!confirm('이 메모를 삭제할까요?')) return;
-  store['메모'].splice(idx, 1);
-  saveSheet('메모', store['메모']);
-  renderTaskContent();
-}
-
-// ============================================================
-//  UI HELPERS
-// ============================================================
-function showLoading(show) {
-  document.getElementById('loading').classList.toggle('show', show);
-}
-
-function showToast(msg, type='info') {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  const icons = { success:'✓', error:'✕', info:'ℹ' };
-  toast.innerHTML = `<span>${icons[type]||'ℹ'}</span><span>${msg}</span>`;
-  container.appendChild(toast);
-  setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity 0.3s'; setTimeout(()=>toast.remove(), 300); }, 3200);
-}
-
-function showModal(html) {
-  document.getElementById('modal-content').innerHTML = html;
-  document.getElementById('modal-overlay').classList.add('show');
-}
-
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('show');
-}
-
-document.getElementById('modal-overlay').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
 
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sidebar-overlay').classList.toggle('show');
+  document.getElementById('overlay').classList.toggle('show');
 }
-
 function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebar-overlay').classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
 }
 
-// Safe HTML escape helper
-function esc(str) {
-  return (str||'').toString()
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+// ============================================================
+// DRAG/DROP helpers
+// ============================================================
+function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag'); }
+function handleDragLeave(e, id) { document.getElementById(id).classList.remove('drag'); }
+function handleDrop(e, type) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  if (type === 'inventory') processInvFile(file);
+  else if (type === 'products') processProdFile(file);
+  e.currentTarget.classList.remove('drag');
 }
+
+// ============================================================
+// INVENTORY
+// ============================================================
+function handleInvFile(e) { processInvFile(e.target.files[0]); }
+
+function processInvFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      // Get raw arrays; row 0 = merged group headers (skip), row 1 = actual headers, row 2+ = data
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (rows.length < 3) { showToast('데이터가 없습니다.'); return; }
+
+      const headerRow = rows[1]; // index 1 = row 2 in Excel
+      const dataRows = rows.slice(2); // index 2+ = row 3+
+
+      // Map header names to column indices
+      const hi = {};
+      headerRow.forEach((h, i) => { if (h !== '' && h !== null && h !== undefined) hi[String(h).trim()] = i; });
+
+      function col(row, name) {
+        const idx = hi[name];
+        return idx !== undefined ? String(row[idx] ?? '').trim() : '';
+      }
+      function numCol(row, name) {
+        const idx = hi[name];
+        if (idx === undefined) return 0;
+        const v = row[idx];
+        if (v === '' || v === null || v === undefined) return 0;
+        return Number(String(v).replace(/,/g,'')) || 0;
+      }
+
+      function parseBrand(raw) {
+        // "1096:프레임워크" -> "프레임워크"
+        if (!raw) return '';
+        const idx = raw.indexOf(':');
+        return idx >= 0 ? raw.slice(idx + 1).trim() : raw.trim();
+      }
+      function parseCategory(raw) {
+        if (!raw) return '';
+        const idx = raw.indexOf(':');
+        const name = idx >= 0 ? raw.slice(idx + 1).trim() : raw.trim();
+        if (name.includes('선글라스')) return '선글라스';
+        if (name.includes('안경테') || name.includes('안경')) return '안경';
+        if (name === 'AI') return 'AI안경';
+        return name;
+      }
+      function parseStatus(row) {
+        const fp = col(row, '강제품절');
+        const lim = col(row, '재고한정');
+        if (fp === 'True' || fp === 'TRUE' || fp === true) return '강제품절';
+        if (lim === 'True' || lim === 'TRUE' || lim === true) return '한정';
+        return '무제한';
+      }
+
+      invData = dataRows.map((row, rowIdx) => {
+        const sku = col(row, 'SKU');
+        if (!sku) return null;
+        return {
+          _rowIdx: rowIdx,
+          sku,
+          name: col(row, '스타일명'),
+          brand: parseBrand(col(row, '서브브랜드')),
+          category: parseCategory(col(row, '복종')),
+          price: numCol(row, '소비자가'),
+          status: parseStatus(row),
+          warehouseQty: numCol(row, '창고재고'),
+          storeQty: numCol(row, '매장재고'),
+          onlineQty: numCol(row, '자사몰연동'),
+          _raw: row
+        };
+      }).filter(Boolean);
+
+      localStorage.setItem('invData', JSON.stringify(invData));
+      renderInvKPI();
+      populateInvBrandFilter();
+      filterInventory();
+      document.getElementById('inv-upload-zone').style.display = 'none';
+      showToast(`재고 데이터 ${invData.length}건 로드 완료`);
+    } catch(err) {
+      console.error(err);
+      showToast('파일 파싱 중 오류가 발생했습니다: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderInvKPI() {
+  const sg = invData.filter(r => r.category === '선글라스').length;
+  const gl = invData.filter(r => r.category === '안경').length;
+  const ai = invData.filter(r => r.category === 'AI안경').length;
+  const fp = invData.filter(r => r.status === '강제품절').length;
+  const lim = invData.filter(r => r.status === '한정').length;
+  const unl = invData.filter(r => r.status === '무제한').length;
+
+  const kpi = document.getElementById('inv-kpi');
+  kpi.style.display = 'grid';
+  kpi.innerHTML = `
+    <div class="kpi-card kpi-accent"><div class="kpi-label">선글라스</div><div class="kpi-value">${sg.toLocaleString()}</div><div class="kpi-sub">SKU</div></div>
+    <div class="kpi-card kpi-accent"><div class="kpi-label">안경</div><div class="kpi-value">${gl.toLocaleString()}</div><div class="kpi-sub">SKU</div></div>
+    <div class="kpi-card kpi-accent"><div class="kpi-label">AI안경</div><div class="kpi-value">${ai.toLocaleString()}</div><div class="kpi-sub">SKU</div></div>
+    <div class="kpi-card kpi-red"><div class="kpi-label">강제품절</div><div class="kpi-value">${fp.toLocaleString()}</div><div class="kpi-sub">SKU</div></div>
+    <div class="kpi-card kpi-orange"><div class="kpi-label">한정</div><div class="kpi-value">${lim.toLocaleString()}</div><div class="kpi-sub">SKU</div></div>
+    <div class="kpi-card kpi-green"><div class="kpi-label">무제한</div><div class="kpi-value">${unl.toLocaleString()}</div><div class="kpi-sub">SKU</div></div>
+  `;
+}
+
+function populateInvBrandFilter() {
+  const brands = [...new Set(invData.map(r => r.brand).filter(Boolean))].sort();
+  const sel = document.getElementById('inv-brand');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">전체 브랜드</option>' + brands.map(b => `<option>${b}</option>`).join('');
+  if (cur) sel.value = cur;
+}
+
+function filterInventory() {
+  const search = document.getElementById('inv-search').value.toLowerCase();
+  const cat = document.getElementById('inv-cat').value;
+  const status = document.getElementById('inv-status').value;
+  const brand = document.getElementById('inv-brand').value;
+
+  invFiltered = invData.filter(r => {
+    if (cat && r.category !== cat) return false;
+    if (status && r.status !== status) return false;
+    if (brand && r.brand !== brand) return false;
+    if (search && !r.sku.toLowerCase().includes(search) && !r.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  invPage = 1;
+  document.getElementById('inv-toolbar').style.display = 'flex';
+  document.getElementById('inv-table-wrap').style.display = 'block';
+  renderInvTable();
+}
+
+function renderInvTable() {
+  const start = (invPage - 1) * INV_PER_PAGE;
+  const pageData = invFiltered.slice(start, start + INV_PER_PAGE);
+  document.getElementById('inv-count').textContent = `총 ${invFiltered.length.toLocaleString()}건`;
+
+  const tbody = document.getElementById('inv-tbody');
+  tbody.innerHTML = pageData.map((r, i) => {
+    const globalIdx = invData.indexOf(r);
+    return `<tr>
+      <td style="font-family:monospace;font-size:12px;">${r.sku}</td>
+      <td>${r.name}</td>
+      <td>${r.category}</td>
+      <td>${r.brand}</td>
+      <td>${r.price ? r.price.toLocaleString() + '원' : '-'}</td>
+      <td>
+        <select class="status-select" onchange="changeInvStatus(${globalIdx}, this.value)" style="border-color:${r.status==='강제품절'?'#ef4444':r.status==='한정'?'#f97316':'#22c55e'}">
+          <option ${r.status==='강제품절'?'selected':''}>강제품절</option>
+          <option ${r.status==='한정'?'selected':''}>한정</option>
+          <option ${r.status==='무제한'?'selected':''}>무제한</option>
+        </select>
+      </td>
+      <td>${r.warehouseQty.toLocaleString()}</td>
+      <td>${r.storeQty.toLocaleString()}</td>
+      <td>${r.onlineQty.toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  renderPagination('inv', invFiltered.length, INV_PER_PAGE, invPage);
+}
+
+function changeInvStatus(idx, newStatus) {
+  invData[idx].status = newStatus;
+  localStorage.setItem('invData', JSON.stringify(invData));
+  renderInvKPI();
+  // Save changed row to GSheet
+  const row = invData[idx];
+  saveSheetData('재고', [{ sku: row.sku, status: newStatus }]);
+  showToast('상태가 저장되었습니다.');
+}
+
+// ============================================================
+// PRODUCTS
+// ============================================================
+function handleProdFile(e) { processProdFile(e.target.files[0]); }
+
+function processProdFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const text = e.target.result;
+      const rows = parseCSV(text);
+      if (rows.length < 2) { showToast('데이터가 없습니다.'); return; }
+
+      const headers = rows[0];
+      const hi = {};
+      headers.forEach((h, i) => { if (h) hi[h.trim()] = i; });
+
+      function col(row, name) {
+        const idx = hi[name];
+        return idx !== undefined ? String(row[idx] ?? '').trim() : '';
+      }
+      function parsePrice(s) {
+        return parseInt(String(s).replace(/[",\s]/g, '')) || 0;
+      }
+      function parseCatCMS(raw) {
+        const u = raw.toUpperCase();
+        if (u.includes('SUNGLASS')) return '선글라스';
+        if (u.includes('GLASS')) return '안경';
+        if (u.includes('AI')) return 'AI안경';
+        return raw;
+      }
+      function cleanName(s) {
+        return s.replace(/^[▣■□▶▷●○◆◇★☆]+\s*/, '').trim();
+      }
+
+      prodData = rows.slice(1).map((row, i) => {
+        const code = col(row, '상품코드');
+        if (!code) return null;
+        return {
+          code,
+          refName: cleanName(col(row, '참고 상품명')),
+          name: col(row, '상품명'),
+          category: parseCatCMS(col(row, '대분류')),
+          brand: col(row, '브랜드 대분류'),
+          price: parsePrice(col(row, '판매가')),
+          status: col(row, '상품상태'),
+          views: parseInt(col(row, '조회수')) || 0,
+          orders: parseInt(col(row, '주문수')) || 0,
+          sales: parseInt(col(row, '판매수')) || 0,
+        };
+      }).filter(Boolean);
+
+      localStorage.setItem('prodData', JSON.stringify(prodData));
+      renderProdKPI();
+      filterProducts();
+      document.getElementById('prod-upload-zone').style.display = 'none';
+      showToast(`상품 데이터 ${prodData.length}건 로드 완료`);
+    } catch(err) {
+      console.error(err);
+      showToast('CSV 파싱 오류: ' + err.message);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let cur = [], field = '', inQuote = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuote) {
+      if (ch === '"') {
+        if (text[i+1] === '"') { field += '"'; i++; }
+        else inQuote = false;
+      } else { field += ch; }
+    } else {
+      if (ch === '"') { inQuote = true; }
+      else if (ch === ',') { cur.push(field); field = ''; }
+      else if (ch === '\n') { cur.push(field); rows.push(cur); cur = []; field = ''; }
+      else if (ch === '\r') { /* skip */ }
+      else { field += ch; }
+    }
+  }
+  if (field || cur.length) { cur.push(field); rows.push(cur); }
+  return rows;
+}
+
+function renderProdKPI() {
+  const total = prodData.length;
+  const active = prodData.filter(r => r.status === '판매중' || r.status.includes('판매')).length;
+  const hidden = prodData.filter(r => r.status === '숨김' || r.status.includes('숨김')).length;
+  const soldout = prodData.filter(r => r.status.includes('품절')).length;
+
+  const kpi = document.getElementById('prod-kpi');
+  kpi.style.display = 'grid';
+  kpi.innerHTML = `
+    <div class="kpi-card kpi-accent"><div class="kpi-label">전체 상품</div><div class="kpi-value">${total.toLocaleString()}</div></div>
+    <div class="kpi-card kpi-green"><div class="kpi-label">판매중</div><div class="kpi-value">${active.toLocaleString()}</div></div>
+    <div class="kpi-card" style="border-left:4px solid var(--gray)"><div class="kpi-label">숨김</div><div class="kpi-value">${hidden.toLocaleString()}</div></div>
+    <div class="kpi-card kpi-red"><div class="kpi-label">품절</div><div class="kpi-value">${soldout.toLocaleString()}</div></div>
+  `;
+}
+
+function filterProducts() {
+  const search = document.getElementById('prod-search').value.toLowerCase();
+  const cat = document.getElementById('prod-cat').value;
+  const status = document.getElementById('prod-status').value;
+
+  prodFiltered = prodData.filter(r => {
+    if (cat && r.category !== cat) return false;
+    if (status && !r.status.includes(status)) return false;
+    if (search && !r.code.toLowerCase().includes(search) && !r.name.toLowerCase().includes(search) && !r.refName.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  prodPage = 1;
+  document.getElementById('prod-toolbar').style.display = 'flex';
+  document.getElementById('prod-table-wrap').style.display = 'block';
+  renderProdTable();
+}
+
+function renderProdTable() {
+  const start = (prodPage - 1) * PROD_PER_PAGE;
+  const pageData = prodFiltered.slice(start, start + PROD_PER_PAGE);
+  document.getElementById('prod-count').textContent = `총 ${prodFiltered.length.toLocaleString()}건`;
+
+  const tbody = document.getElementById('prod-tbody');
+  tbody.innerHTML = pageData.map(r => {
+    const statusBadge = r.status.includes('판매') ? 'badge-blue' : r.status.includes('숨김') ? 'badge-gray' : r.status.includes('품절') ? 'badge-red' : 'badge-gray';
+    return `<tr>
+      <td style="font-family:monospace;font-size:12px;">${r.code}</td>
+      <td title="${r.name}" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${r.refName || r.name}</td>
+      <td>${r.category}</td>
+      <td>${r.brand}</td>
+      <td>${r.price ? r.price.toLocaleString() + '원' : '-'}</td>
+      <td><span class="badge ${statusBadge}">${r.status}</span></td>
+      <td>${r.views.toLocaleString()}</td>
+      <td>${r.orders.toLocaleString()}</td>
+      <td>${r.sales.toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  renderPagination('prod', prodFiltered.length, PROD_PER_PAGE, prodPage);
+}
+
+// ============================================================
+// PAGINATION
+// ============================================================
+function renderPagination(prefix, total, perPage, current) {
+  const totalPages = Math.ceil(total / perPage);
+  const el = document.getElementById(prefix + '-pagination');
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+  let pages = [];
+  const range = 2;
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= current - range && i <= current + range)) pages.push(i);
+    else if (pages[pages.length-1] !== '...') pages.push('...');
+  }
+
+  el.innerHTML = `
+    <button class="page-btn" onclick="goPage('${prefix}',${current-1})" ${current===1?'disabled':''}>‹</button>
+    ${pages.map(p => p === '...' ? `<span style="padding:0 4px;color:var(--text-secondary)">…</span>` : `<button class="page-btn ${p===current?'active':''}" onclick="goPage('${prefix}',${p})">${p}</button>`).join('')}
+    <button class="page-btn" onclick="goPage('${prefix}',${current+1})" ${current===totalPages?'disabled':''}>›</button>
+  `;
+}
+
+function goPage(prefix, page) {
+  if (prefix === 'inv') {
+    const totalPages = Math.ceil(invFiltered.length / INV_PER_PAGE);
+    if (page < 1 || page > totalPages) return;
+    invPage = page;
+    renderInvTable();
+  } else if (prefix === 'prod') {
+    const totalPages = Math.ceil(prodFiltered.length / PROD_PER_PAGE);
+    if (page < 1 || page > totalPages) return;
+    prodPage = page;
+    renderProdTable();
+  }
+  window.scrollTo(0, 0);
+}
+
+// ============================================================
+// CALENDAR
+// ============================================================
+function initCalendar() { renderCalendar(); }
+
+function changeMonth(delta) {
+  calMonth += delta;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const title = `${calYear}년 ${calMonth + 1}월`;
+  document.getElementById('cal-title').textContent = title;
+
+  const grid = document.getElementById('cal-grid');
+  const days = ['일','월','화','수','목','금','토'];
+  const today = new Date();
+
+  let html = days.map(d => `<div class="cal-day-header">${d}</div>`).join('');
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const prevDays = new Date(calYear, calMonth, 0).getDate();
+
+  // Prev month days
+  for (let i = firstDay - 1; i >= 0; i--) {
+    html += `<div class="cal-day other-month"><span class="day-num" style="color:var(--text-secondary)">${prevDays - i}</span></div>`;
+  }
+
+  // Current month
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = today.getFullYear() === calYear && today.getMonth() === calMonth && today.getDate() === d;
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayEvents = calEvents.filter(e => e.date === dateStr);
+    const evHTML = dayEvents.map((e, i) => {
+      const evIdx = calEvents.indexOf(e);
+      return `<div class="cal-event ev-${e.type}" onclick="editEvent(event,${evIdx})" title="${e.title}">${e.title}</div>`;
+    }).join('');
+    html += `<div class="cal-day ${isToday?'today':''}" onclick="openEventModal('${dateStr}')">
+      <span class="day-num">${d}</span>
+      ${evHTML}
+    </div>`;
+  }
+
+  // Next month fill
+  const total = firstDay + daysInMonth;
+  const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let i = 1; i <= remaining; i++) {
+    html += `<div class="cal-day other-month"><span class="day-num" style="color:var(--text-secondary)">${i}</span></div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+function openEventModal(dateStr) {
+  editingEventIdx = null;
+  document.getElementById('ev-date').value = dateStr;
+  document.getElementById('ev-type').value = '프로모션';
+  document.getElementById('ev-title').value = '';
+  document.getElementById('ev-content').value = '';
+  document.getElementById('ev-delete-btn').style.display = 'none';
+  document.getElementById('event-modal-title').textContent = '이벤트 추가';
+  document.getElementById('event-modal').style.display = 'flex';
+}
+
+function editEvent(e, idx) {
+  e.stopPropagation();
+  editingEventIdx = idx;
+  const ev = calEvents[idx];
+  document.getElementById('ev-date').value = ev.date;
+  document.getElementById('ev-type').value = ev.type;
+  document.getElementById('ev-title').value = ev.title;
+  document.getElementById('ev-content').value = ev.content || '';
+  document.getElementById('ev-delete-btn').style.display = 'inline-flex';
+  document.getElementById('event-modal-title').textContent = '이벤트 수정';
+  document.getElementById('event-modal').style.display = 'flex';
+}
+
+function saveEvent() {
+  const ev = {
+    date: document.getElementById('ev-date').value,
+    type: document.getElementById('ev-type').value,
+    title: document.getElementById('ev-title').value,
+    content: document.getElementById('ev-content').value,
+  };
+  if (!ev.title) { showToast('제목을 입력하세요.'); return; }
+  if (editingEventIdx !== null) calEvents[editingEventIdx] = ev;
+  else calEvents.push(ev);
+  localStorage.setItem('calEvents', JSON.stringify(calEvents));
+  saveSheetData('캘린더', calEvents);
+  closeModal('event-modal');
+  renderCalendar();
+  showToast('이벤트가 저장되었습니다.');
+}
+
+function deleteEvent() {
+  if (editingEventIdx === null) return;
+  calEvents.splice(editingEventIdx, 1);
+  localStorage.setItem('calEvents', JSON.stringify(calEvents));
+  saveSheetData('캘린더', calEvents);
+  closeModal('event-modal');
+  renderCalendar();
+  showToast('이벤트가 삭제되었습니다.');
+}
+
+// ============================================================
+// SALES
+// ============================================================
+function initSales() {
+  renderSalesKPI();
+  renderSalesTable();
+  renderCharts();
+}
+
+function renderSalesKPI() {
+  const total = salesData.reduce((s, r) => s + (r.amount || 0), 0);
+  const thisMonth = new Date();
+  const monthData = salesData.filter(r => r.date && r.date.startsWith(`${thisMonth.getFullYear()}-${String(thisMonth.getMonth()+1).padStart(2,'0')}`));
+  const monthTotal = monthData.reduce((s, r) => s + (r.amount || 0), 0);
+
+  const kpi = document.getElementById('sales-kpi');
+  kpi.innerHTML = `
+    <div class="kpi-card kpi-accent"><div class="kpi-label">총 매출</div><div class="kpi-value">${(total/10000).toFixed(0)}만</div><div class="kpi-sub">${total.toLocaleString()}원</div></div>
+    <div class="kpi-card kpi-green"><div class="kpi-label">이번달 매출</div><div class="kpi-value">${(monthTotal/10000).toFixed(0)}만</div><div class="kpi-sub">${monthTotal.toLocaleString()}원</div></div>
+    <div class="kpi-card"><div class="kpi-label">매출 건수</div><div class="kpi-value">${salesData.length}</div><div class="kpi-sub">건</div></div>
+  `;
+}
+
+function renderSalesTable() {
+  const tbody = document.getElementById('sales-tbody');
+  const sorted = [...salesData].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  tbody.innerHTML = sorted.map((r, i) => `<tr>
+    <td>${r.date || '-'}</td>
+    <td>${r.category || '-'}</td>
+    <td>${r.brand || '-'}</td>
+    <td>${(r.amount||0).toLocaleString()}원</td>
+    <td>${r.memo || ''}</td>
+    <td><button class="btn btn-secondary btn-sm" style="color:var(--red);border-color:var(--red);" onclick="deleteSales(${salesData.indexOf(r)})">삭제</button></td>
+  </tr>`).join('');
+}
+
+function openSalesModal() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('sal-date').value = today;
+  document.getElementById('sal-amount').value = '';
+  document.getElementById('sal-memo').value = '';
+  document.getElementById('sales-modal').style.display = 'flex';
+}
+
+function saveSalesEntry() {
+  const entry = {
+    date: document.getElementById('sal-date').value,
+    category: document.getElementById('sal-cat').value,
+    brand: document.getElementById('sal-brand').value,
+    amount: parseInt(document.getElementById('sal-amount').value) || 0,
+    memo: document.getElementById('sal-memo').value,
+  };
+  salesData.push(entry);
+  localStorage.setItem('salesData', JSON.stringify(salesData));
+  saveSheetData('매출', salesData);
+  closeModal('sales-modal');
+  initSales();
+  showToast('매출이 저장되었습니다.');
+}
+
+function deleteSales(idx) {
+  salesData.splice(idx, 1);
+  localStorage.setItem('salesData', JSON.stringify(salesData));
+  saveSheetData('매출', salesData);
+  initSales();
+  showToast('삭제되었습니다.');
+}
+
+function renderCharts() {
+  // Bar: last 6 months
+  const months = [];
+  const amounts = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = `${d.getMonth()+1}월`;
+    months.push(label);
+    const total = salesData.filter(r => r.date && r.date.startsWith(key)).reduce((s, r) => s + (r.amount||0), 0);
+    amounts.push(total);
+  }
+
+  const barCtx = document.getElementById('chart-bar').getContext('2d');
+  if (barChart) barChart.destroy();
+  barChart = new Chart(barCtx, {
+    type: 'bar',
+    data: { labels: months, datasets: [{ label: '매출', data: amounts, backgroundColor: '#4F6EF7', borderRadius: 6 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => (v/10000).toFixed(0) + '만' } } } }
+  });
+
+  // Donut: by category
+  const cats = ['선글라스', '안경', 'AI안경'];
+  const catAmounts = cats.map(c => salesData.filter(r => r.category === c).reduce((s, r) => s + (r.amount||0), 0));
+  const donutCtx = document.getElementById('chart-donut').getContext('2d');
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(donutCtx, {
+    type: 'doughnut',
+    data: { labels: cats, datasets: [{ data: catAmounts, backgroundColor: ['#4F6EF7','#22c55e','#f97316'], borderWidth: 0 }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+  });
+}
+
+// ============================================================
+// TODOS
+// ============================================================
+function initTodos() {
+  renderTodos();
+}
+
+function renderTodos() {
+  const filter = document.getElementById('todo-filter').value;
+  let data = todosData;
+  if (filter) data = data.filter(t => t.priority === filter);
+
+  const list = document.getElementById('todo-list');
+  if (!data.length) {
+    list.innerHTML = '<li style="padding:20px;text-align:center;color:var(--text-secondary);font-size:14px;">할 일이 없습니다</li>';
+    return;
+  }
+
+  // Sort: incomplete first, then by priority
+  const pOrder = { '높음': 0, '중간': 1, '낮음': 2 };
+  data = [...data].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return (pOrder[a.priority] || 1) - (pOrder[b.priority] || 1);
+  });
+
+  list.innerHTML = data.map(t => {
+    const realIdx = todosData.indexOf(t);
+    const today = new Date().toISOString().split('T')[0];
+    const overdue = !t.done && t.due && t.due < today;
+    return `<li class="todo-item ${t.done?'done':''}">
+      <input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo(${realIdx})">
+      <span class="todo-text">${t.text}</span>
+      <span class="todo-meta priority-${t.priority}">[${t.priority}]</span>
+      ${t.due ? `<span class="todo-meta" style="${overdue?'color:var(--red);font-weight:600':''}">📅 ${t.due}</span>` : ''}
+      <button class="btn btn-secondary btn-sm" style="color:var(--red);" onclick="deleteTodo(${realIdx})">✕</button>
+    </li>`;
+  }).join('');
+}
+
+function openTodoModal() {
+  document.getElementById('todo-text').value = '';
+  document.getElementById('todo-priority').value = '중간';
+  document.getElementById('todo-due').value = '';
+  document.getElementById('todo-modal').style.display = 'flex';
+}
+
+function saveTodo() {
+  const text = document.getElementById('todo-text').value.trim();
+  if (!text) { showToast('내용을 입력하세요.'); return; }
+  todosData.push({
+    text,
+    priority: document.getElementById('todo-priority').value,
+    due: document.getElementById('todo-due').value,
+    done: false,
+    created: new Date().toISOString()
+  });
+  localStorage.setItem('todosData', JSON.stringify(todosData));
+  saveSheetData('할일', todosData);
+  closeModal('todo-modal');
+  renderTodos();
+  showToast('추가되었습니다.');
+}
+
+function toggleTodo(idx) {
+  todosData[idx].done = !todosData[idx].done;
+  localStorage.setItem('todosData', JSON.stringify(todosData));
+  saveSheetData('할일', todosData);
+  renderTodos();
+}
+
+function deleteTodo(idx) {
+  todosData.splice(idx, 1);
+  localStorage.setItem('todosData', JSON.stringify(todosData));
+  saveSheetData('할일', todosData);
+  renderTodos();
+  showToast('삭제되었습니다.');
+}
+
+let notesTimer = null;
+function saveNotes() {
+  clearTimeout(notesTimer);
+  notesTimer = setTimeout(() => {
+    notesData = document.getElementById('notes-area').value;
+    localStorage.setItem('notesData', notesData);
+    saveSheetData('메모', [{ content: notesData }]);
+  }, 800);
+}
+
+// ============================================================
+// MODALS / UTILITIES
+// ============================================================
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ============================================================
+// STARTUP
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  if (SCRIPT_URL) {
+    document.getElementById('setup-screen').style.display = 'none';
+    init();
+  } else {
+    // Pre-fill if exists
+    document.getElementById('script-url-input').value = '';
+  }
+
+  // Restore cached data
+  const cachedInv = localStorage.getItem('invData');
+  if (cachedInv) {
+    try {
+      invData = JSON.parse(cachedInv);
+      renderInvKPI();
+      populateInvBrandFilter();
+      filterInventory();
+      document.getElementById('inv-upload-zone').style.display = 'none';
+    } catch(e) {}
+  }
+  const cachedProd = localStorage.getItem('prodData');
+  if (cachedProd) {
+    try {
+      prodData = JSON.parse(cachedProd);
+      renderProdKPI();
+      filterProducts();
+      document.getElementById('prod-upload-zone').style.display = 'none';
+    } catch(e) {}
+  }
+});
 </script>
 </body>
 </html>
