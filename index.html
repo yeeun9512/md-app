@@ -685,7 +685,28 @@ function init() {
     }).catch(()=>{});
     loadSheetData('캘린더').then(d => { if (d && d.length) { calEvents = d; localStorage.setItem('calEvents', JSON.stringify(calEvents)); renderCalendar(); } }).catch(()=>{});
     loadSheetData('매출').then(d => { if (d && d.length) { salesRawData = d; initSales(); } }).catch(()=>{});
-    loadSheetData('할일').then(d => { if (d && d.length) { todosData = d; localStorage.setItem('todosData', JSON.stringify(todosData)); renderTodos(); } }).catch(()=>{});
+    loadSheetData('할일').then(d => {
+      if (d && d.length) {
+        // d는 [{text,priority,...}] 또는 [['text','priority',...], [...]] 형태일 수 있음
+        const first = d[0];
+        if (Array.isArray(first)) {
+          // 2D 배열: 첫 행 헤더, 나머지 데이터
+          const header = first;
+          todosData = d.slice(1).map(row => {
+            const obj = {};
+            header.forEach((h,i) => obj[h] = row[i]||'');
+            obj.done = obj.done === 'true' || obj.done === true;
+            return obj;
+          }).filter(t => t.text);
+        } else {
+          // 객체 배열
+          todosData = d.filter(t => t && t.text);
+          todosData.forEach(t => { t.done = t.done === 'true' || t.done === true; });
+        }
+        localStorage.setItem('todosData', JSON.stringify(todosData));
+        renderTodos();
+      }
+    }).catch(()=>{});
     loadSheetData('메모').then(d => {
       if (d && d.length) {
         // data[0] = 헤더행, data[1] = [{content:...}] 또는 ['내용']
@@ -1552,7 +1573,7 @@ function saveTodo() {
     created: new Date().toISOString()
   });
   localStorage.setItem('todosData', JSON.stringify(todosData));
-  saveSheetData('할일', todosData);
+  saveTodosToSheets();
   closeModal('todo-modal');
   renderTodos();
   showToast('추가되었습니다.');
@@ -1561,16 +1582,27 @@ function saveTodo() {
 function toggleTodo(idx) {
   todosData[idx].done = !todosData[idx].done;
   localStorage.setItem('todosData', JSON.stringify(todosData));
-  saveSheetData('할일', todosData);
+  saveTodosToSheets();
   renderTodos();
 }
 
 function deleteTodo(idx) {
   todosData.splice(idx, 1);
   localStorage.setItem('todosData', JSON.stringify(todosData));
-  saveSheetData('할일', todosData);
+  saveTodosToSheets();
   renderTodos();
   showToast('삭제되었습니다.');
+}
+
+function saveTodosToSheets() {
+  if (!SCRIPT_URL) return;
+  const header = ['text','priority','due','done','created'];
+  const rows = todosData.map(t => [t.text, t.priority||'중간', t.due||'', t.done?'true':'false', t.created||'']);
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({action:'saveData', sheet:'할일', data:[header, ...rows]}),
+    headers: {'Content-Type':'text/plain'}
+  }).catch(()=>{});
 }
 
 let notesTimer = null;
