@@ -101,6 +101,8 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
 .badge-green { background: #dcfce7; color: #16a34a; }
 .badge-gray { background: #f3f4f6; color: #6b7280; }
 .badge-blue { background: #eff6ff; color: #2563eb; }
+.badge-active { background: #dcfce7; color: #16a34a; }
+.badge-out { background: #fee2e2; color: #dc2626; }
 
 /* Status select in table */
 .status-select { border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; font-size: 12px; cursor: pointer; background: #fff; }
@@ -218,6 +220,9 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
     </div>
     <div class="nav-item" onclick="switchTab('sales')" data-tab="sales">
       <span class="icon">💰</span> 매출 대시보드
+    </div>
+    <div class="nav-item" onclick="switchTab('coupons')" data-tab="coupons">
+      <span class="icon">🎟️</span> 쿠폰관리
     </div>
     <div class="nav-item" onclick="switchTab('todos')" data-tab="todos">
       <span class="icon">✅</span> 할 일 / 메모
@@ -413,6 +418,54 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
         </table>
       </div>
       <div class="pagination" id="sales-pagination"></div>
+    </div>
+
+    <!-- ===================== 쿠폰관리 ===================== -->
+    <div class="tab-pane" id="tab-coupons">
+
+      <!-- 업로드 존 -->
+      <div class="upload-zone" id="coupon-upload-zone" onclick="document.getElementById('coupon-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'coupon-upload-zone')" ondrop="handleDrop(event,'coupons')">
+        <div class="upload-icon">🎟️</div>
+        <p><strong>쿠폰 브랜드 정리 XLSX</strong> 파일을 업로드하세요</p>
+        <p style="font-size:12px;margin-top:6px;">기존 정리 파일 업로드 후 추가/수정 가능</p>
+        <input type="file" id="coupon-file" accept=".xlsx,.xls" onchange="handleCouponFile(event)">
+      </div>
+
+      <!-- KPI -->
+      <div id="coupon-kpi" class="kpi-grid" style="display:none;"></div>
+
+      <!-- 툴바 -->
+      <div class="toolbar" id="coupon-toolbar" style="display:none;">
+        <input type="text" id="coupon-search" placeholder="브랜드명 검색..." oninput="filterCoupons()">
+        <select id="coupon-type-filter" onchange="filterCoupons()">
+          <option value="">전체 쿠폰</option>
+          <option value="퍼플 12%">퍼플 12%</option>
+          <option value="퍼플 20%">퍼플 20%</option>
+          <option value="레드 12%">레드 12%</option>
+          <option value="레드 20%">레드 20%</option>
+          <option value="블루 12%">블루 12%</option>
+          <option value="블루 20%">블루 20%</option>
+          <option value="신규 12% 자동">신규 12% 자동</option>
+          <option value="신규 20% 수동">신규 20% 수동</option>
+          <option value="신규 20% 자동">신규 20% 자동</option>
+        </select>
+        <select id="coupon-status-filter" onchange="filterCoupons()">
+          <option value="">전체 상태</option>
+          <option value="진행">진행만</option>
+          <option value="제외">제외만</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openAddBrandModal()">+ 브랜드 추가</button>
+        <span class="page-info" id="coupon-count"></span>
+      </div>
+
+      <!-- 테이블 -->
+      <div id="coupon-table-wrap" class="table-wrap" style="display:none; overflow-x:auto;">
+        <table id="coupon-table">
+          <thead id="coupon-thead"></thead>
+          <tbody id="coupon-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="coupon-pagination"></div>
     </div>
 
     <!-- ===================== 할 일 / 메모 ===================== -->
@@ -628,6 +681,7 @@ function init() {
     loadSheetData('캘린더').then(d => { if (d && d.length) { calEvents = d; localStorage.setItem('calEvents', JSON.stringify(calEvents)); renderCalendar(); } }).catch(()=>{});
     loadSheetData('매출').then(d => { if (d && d.length) { salesRawData = d; initSales(); } }).catch(()=>{});
     loadSheetData('할일').then(d => { if (d && d.length) { todosData = d; localStorage.setItem('todosData', JSON.stringify(todosData)); renderTodos(); } }).catch(()=>{});
+    loadCouponFromSheets().catch(()=>{});
   }
 }
 
@@ -686,6 +740,7 @@ function handleDrop(e, type) {
   if (!file) return;
   if (type === 'inventory') processInvFile(file);
   else if (type === 'products') processProdFile(file);
+  else if (type === 'coupons') processCouponFile(file);
   e.currentTarget.classList.remove('drag');
 }
 
@@ -1524,6 +1579,183 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ============================================================
+// COUPON MANAGEMENT
+// ============================================================
+const COUPON_TYPES = ['퍼플 12%','퍼플 20%','레드 12%','레드 20%','블루 12%','블루 20%','신규 12% 자동','신규 20% 수동','신규 20% 자동'];
+// column index (0-based) in the xlsx for each coupon status text (C,E,G,I,K,M,Q,S,U → 2,4,6,8,10,12,16,18,20)
+const COUPON_COLS = [2,4,6,8,10,12,16,18,20];
+
+let couponData = []; // [{brand, statuses:[...9 '진행'|'제외']}]
+let couponPage = 1;
+const COUPON_PAGE_SIZE = 50;
+
+function handleCouponFile(e) { processCouponFile(e.target.files[0]); }
+
+function processCouponFile(file) {
+  if (!file) return;
+  showToast('쿠폰 파일 파싱 중...');
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const wb = XLSX.read(ev.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      // Row 0 = group header, Row 1 = column header, Row 2 = COUNTIF row → skip first 3 rows
+      const data = [];
+      for (let i = 3; i < rows.length; i++) {
+        const row = rows[i];
+        const brand = String(row[0] || '').trim();
+        if (!brand) continue;
+        const statuses = COUPON_COLS.map(col => {
+          const val = String(row[col] || '').trim();
+          // status col: '진행' or '제외'. Also derive from checkbox col (True=제외, False=진행)
+          if (val === '진행' || val === '제외') return val;
+          // fallback: check checkbox col (one before status col)
+          const chk = String(row[col-1] || '').trim().toLowerCase();
+          if (chk === 'true') return '제외';
+          return '진행';
+        });
+        data.push({brand, statuses});
+      }
+      couponData = data;
+      couponPage = 1;
+      showToast(`쿠폰 데이터 ${data.length}개 브랜드 로드 완료`);
+      document.getElementById('coupon-upload-zone').style.display='none';
+      document.getElementById('coupon-kpi').style.display='';
+      document.getElementById('coupon-toolbar').style.display='';
+      document.getElementById('coupon-table-wrap').style.display='';
+      renderCouponKPI();
+      renderCouponTable();
+      saveCouponToSheets();
+    } catch(err) {
+      showToast('쿠폰 파일 파싱 오류: '+err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderCouponKPI() {
+  const kpiEl = document.getElementById('coupon-kpi');
+  const counts = COUPON_TYPES.map((t,i) => couponData.filter(d=>d.statuses[i]==='진행').length);
+  kpiEl.innerHTML = COUPON_TYPES.map((t,i)=>`
+    <div class="kpi-card">
+      <div class="kpi-value">${counts[i]}</div>
+      <div class="kpi-label">${t} 진행</div>
+    </div>
+  `).join('');
+}
+
+function getFilteredCouponData() {
+  const q = (document.getElementById('coupon-search')||{value:''}).value.toLowerCase();
+  const typeFilter = (document.getElementById('coupon-type-filter')||{value:''}).value;
+  const statusFilter = (document.getElementById('coupon-status-filter')||{value:''}).value;
+  const typeIdx = typeFilter ? COUPON_TYPES.indexOf(typeFilter) : -1;
+  return couponData.filter(d => {
+    if (q && !d.brand.toLowerCase().includes(q)) return false;
+    if (statusFilter && typeIdx >= 0) {
+      if (d.statuses[typeIdx] !== statusFilter) return false;
+    } else if (statusFilter) {
+      if (!d.statuses.some(s=>s===statusFilter)) return false;
+    }
+    return true;
+  });
+}
+
+function filterCoupons() { couponPage=1; renderCouponTable(); }
+
+function renderCouponTable() {
+  const filtered = getFilteredCouponData();
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total/COUPON_PAGE_SIZE));
+  if (couponPage > totalPages) couponPage = totalPages;
+  const start = (couponPage-1)*COUPON_PAGE_SIZE;
+  const page = filtered.slice(start, start+COUPON_PAGE_SIZE);
+
+  document.getElementById('coupon-count').textContent = `총 ${total}개 브랜드`;
+
+  // thead
+  document.getElementById('coupon-thead').innerHTML = `<tr>
+    <th style="min-width:140px;">브랜드</th>
+    ${COUPON_TYPES.map(t=>`<th style="min-width:90px;">${t}</th>`).join('')}
+  </tr>`;
+
+  // tbody
+  document.getElementById('coupon-tbody').innerHTML = page.map((d,pi)=>{
+    const realIdx = start+pi;
+    return `<tr>
+      <td><strong>${d.brand}</strong></td>
+      ${d.statuses.map((s,ci)=>`
+        <td style="text-align:center;">
+          <span class="badge ${s==='진행'?'badge-active':'badge-out'}" style="cursor:pointer;" onclick="toggleCouponStatus(${realIdx},${ci})">${s}</span>
+        </td>`).join('')}
+    </tr>`;
+  }).join('');
+
+  // pagination
+  let pages = '';
+  for(let p=1;p<=totalPages;p++){
+    if(p===1||p===totalPages||Math.abs(p-couponPage)<=2)
+      pages+=`<button class="page-btn${p===couponPage?' active':''}" onclick="couponPage=${p};renderCouponTable()">${p}</button>`;
+    else if(Math.abs(p-couponPage)===3) pages+=`<span>…</span>`;
+  }
+  document.getElementById('coupon-pagination').innerHTML = pages;
+}
+
+function toggleCouponStatus(dataIdx, couponIdx) {
+  const cur = couponData[dataIdx].statuses[couponIdx];
+  couponData[dataIdx].statuses[couponIdx] = cur==='진행'?'제외':'진행';
+  renderCouponKPI();
+  renderCouponTable();
+  saveCouponToSheets();
+}
+
+function openAddBrandModal() {
+  const name = prompt('추가할 브랜드명을 입력하세요:');
+  if (!name || !name.trim()) return;
+  if (couponData.some(d=>d.brand===name.trim())) { showToast('이미 존재하는 브랜드입니다'); return; }
+  couponData.unshift({brand:name.trim(), statuses: Array(9).fill('진행')});
+  couponPage=1;
+  renderCouponKPI();
+  renderCouponTable();
+  saveCouponToSheets();
+  showToast('브랜드 추가 완료: '+name.trim());
+}
+
+function saveCouponToSheets() {
+  if (!SCRIPT_URL || !couponData.length) return;
+  const rows = couponData.map(d=>[d.brand, ...d.statuses]);
+  const header = ['브랜드', ...COUPON_TYPES];
+  fetch(SCRIPT_URL, {
+    method:'POST',
+    body: JSON.stringify({action:'saveData', sheet:'쿠폰', data:[header,...rows]}),
+    headers:{'Content-Type':'text/plain'}
+  }).catch(()=>{});
+}
+
+async function loadCouponFromSheets() {
+  if (!SCRIPT_URL) return;
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=getData&sheet=쿠폰`);
+    const json = await res.json();
+    if (!json.data || json.data.length < 2) return;
+    const rows = json.data.slice(1); // skip header
+    couponData = rows.map(row=>({
+      brand: String(row[0]||''),
+      statuses: Array.from({length:9},(_,i)=>String(row[i+1]||'진행'))
+    })).filter(d=>d.brand);
+    if (couponData.length) {
+      couponPage=1;
+      document.getElementById('coupon-upload-zone').style.display='none';
+      document.getElementById('coupon-kpi').style.display='';
+      document.getElementById('coupon-toolbar').style.display='';
+      document.getElementById('coupon-table-wrap').style.display='';
+      renderCouponKPI();
+      renderCouponTable();
+    }
+  } catch(e) {}
 }
 
 // ============================================================
