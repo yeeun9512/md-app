@@ -566,15 +566,16 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
 <!-- Modal: Todo -->
 <div class="modal-overlay" id="todo-modal" style="display:none;">
   <div class="modal">
-    <h3>할 일 추가</h3>
+    <h3 id="todo-modal-title">할 일 추가</h3>
+    <input type="hidden" id="todo-edit-idx" value="-1">
     <div class="form-group">
       <label>내용</label>
-      <input type="text" id="todo-text" placeholder="할 일을 입력하세요">
+      <textarea id="todo-text" placeholder="할 일을 입력하세요" rows="3" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
     </div>
     <div class="form-group">
       <label>우선순위</label>
       <select id="todo-priority">
-        <option>높음</option><option>중간</option><option>낮음</option>
+        <option>높음</option><option selected>중간</option><option>낮음</option>
       </select>
     </div>
     <div class="form-group">
@@ -1541,30 +1542,65 @@ function renderTodos() {
     return (pOrder[a.priority] || 1) - (pOrder[b.priority] || 1);
   });
 
+  const priorityColor = { '높음':'#dc2626', '중간':'#d97706', '낮음':'#6b7280' };
+  const priorityBg = { '높음':'#fee2e2', '중간':'#fef9c3', '낮음':'#f3f4f6' };
   list.innerHTML = data.map(t => {
     const realIdx = todosData.indexOf(t);
     const today = new Date().toISOString().split('T')[0];
     const overdue = !t.done && t.due && t.due < today;
-    return `<li class="todo-item ${t.done?'done':''}">
-      <input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo(${realIdx})">
-      <span class="todo-text">${t.text}</span>
-      <span class="todo-meta priority-${t.priority}">[${t.priority}]</span>
-      ${t.due ? `<span class="todo-meta" style="${overdue?'color:var(--red);font-weight:600':''}">📅 ${t.due}</span>` : ''}
-      <button class="btn btn-secondary btn-sm" style="color:var(--red);" onclick="deleteTodo(${realIdx})">✕</button>
+    const pColor = priorityColor[t.priority] || '#6b7280';
+    const pBg = priorityBg[t.priority] || '#f3f4f6';
+    return `<li class="todo-item ${t.done?'done':''}" style="flex-direction:column;align-items:flex-start;gap:6px;padding:14px 16px;">
+      <div style="display:flex;align-items:center;gap:10px;width:100%;">
+        <input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo(${realIdx})" style="flex-shrink:0;">
+        <span class="todo-text" style="flex:1;font-size:14px;line-height:1.5;word-break:break-all;">${t.text}</span>
+        <button class="btn btn-sm" style="background:#f0f4ff;color:#4F6EF7;padding:3px 8px;flex-shrink:0;" onclick="openEditTodoModal(${realIdx})">✏️</button>
+        <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;padding:3px 8px;flex-shrink:0;" onclick="deleteTodo(${realIdx})">🗑</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;padding-left:26px;flex-wrap:wrap;">
+        <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:${pBg};color:${pColor};">${t.priority||'중간'}</span>
+        ${t.due ? `<span style="font-size:11px;color:${overdue?'#dc2626':'var(--text-secondary)'};font-weight:${overdue?'600':'400'};">📅 ${t.due}${overdue?' ⚠️ 마감초과':''}</span>` : ''}
+      </div>
     </li>`;
   }).join('');
 }
 
 function openTodoModal() {
+  document.getElementById('todo-modal-title').textContent = '할 일 추가';
+  document.getElementById('todo-edit-idx').value = '-1';
   document.getElementById('todo-text').value = '';
   document.getElementById('todo-priority').value = '중간';
   document.getElementById('todo-due').value = '';
   document.getElementById('todo-modal').style.display = 'flex';
 }
 
+function openEditTodoModal(idx) {
+  const t = todosData[idx];
+  if (!t) return;
+  document.getElementById('todo-modal-title').textContent = '할 일 수정';
+  document.getElementById('todo-edit-idx').value = idx;
+  document.getElementById('todo-text').value = t.text || '';
+  document.getElementById('todo-priority').value = t.priority || '중간';
+  document.getElementById('todo-due').value = t.due || '';
+  document.getElementById('todo-modal').style.display = 'flex';
+}
+
 function saveTodo() {
   const text = document.getElementById('todo-text').value.trim();
   if (!text) { showToast('내용을 입력하세요.'); return; }
+  const editIdx = parseInt(document.getElementById('todo-edit-idx').value);
+  if (editIdx >= 0) {
+    // 수정
+    todosData[editIdx].text = text;
+    todosData[editIdx].priority = document.getElementById('todo-priority').value;
+    todosData[editIdx].due = document.getElementById('todo-due').value;
+    localStorage.setItem('todosData', JSON.stringify(todosData));
+    saveTodosToSheets();
+    closeModal('todo-modal');
+    renderTodos();
+    showToast('수정되었습니다.');
+    return;
+  }
   todosData.push({
     text,
     priority: document.getElementById('todo-priority').value,
