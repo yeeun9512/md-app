@@ -686,6 +686,20 @@ function init() {
     loadSheetData('캘린더').then(d => { if (d && d.length) { calEvents = d; localStorage.setItem('calEvents', JSON.stringify(calEvents)); renderCalendar(); } }).catch(()=>{});
     loadSheetData('매출').then(d => { if (d && d.length) { salesRawData = d; initSales(); } }).catch(()=>{});
     loadSheetData('할일').then(d => { if (d && d.length) { todosData = d; localStorage.setItem('todosData', JSON.stringify(todosData)); renderTodos(); } }).catch(()=>{});
+    loadSheetData('메모').then(d => {
+      if (d && d.length) {
+        // data[0] = 헤더행, data[1] = [{content:...}] 또는 ['내용']
+        const row = d[0];
+        const text = typeof row === 'object' && row !== null && !Array.isArray(row)
+          ? (row.content || '')
+          : (Array.isArray(row) ? row[0] : row) || '';
+        if (text) {
+          notesData = String(text);
+          localStorage.setItem('notesData', notesData);
+          document.getElementById('notes-area').value = notesData;
+        }
+      }
+    }).catch(()=>{});
     loadCouponFromSheets().catch(()=>{});
   }
 }
@@ -1565,7 +1579,14 @@ function saveNotes() {
   notesTimer = setTimeout(() => {
     notesData = document.getElementById('notes-area').value;
     localStorage.setItem('notesData', notesData);
-    saveSheetData('메모', [{ content: notesData }]);
+    // 구글 시트에 저장: 헤더 + 내용 1행
+    if (SCRIPT_URL) {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({action:'saveData', sheet:'메모', data:[['content'],[notesData]]}),
+        headers: {'Content-Type':'text/plain'}
+      }).catch(()=>{});
+    }
   }, 800);
 }
 
