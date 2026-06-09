@@ -454,6 +454,11 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
           <option value="진행">진행만</option>
           <option value="제외">제외만</option>
         </select>
+        <select id="coupon-brand-filter" onchange="filterCoupons()">
+          <option value="">활성+종료 전체</option>
+          <option value="활성" selected>활성 브랜드만</option>
+          <option value="종료">종료 브랜드만</option>
+        </select>
         <button class="btn btn-primary btn-sm" onclick="openAddBrandModal()">+ 브랜드 추가</button>
         <span class="page-info" id="coupon-count"></span>
       </div>
@@ -1588,7 +1593,9 @@ const COUPON_TYPES = ['퍼플 12%','퍼플 20%','레드 12%','레드 20%','블�
 // column index (0-based) in the xlsx for each coupon status text (C,E,G,I,K,M,Q,S,U → 2,4,6,8,10,12,16,18,20)
 const COUPON_COLS = [2,4,6,8,10,12,16,18,20];
 
-let couponData = []; // [{brand, statuses:[...9 '진행'|'제외']}]
+// Each entry: {brand, statuses:[...9 '진행'|'제외'], active: true|false}
+// active=false → 종료 브랜드
+let couponData = [];
 let couponPage = 1;
 const COUPON_PAGE_SIZE = 50;
 
@@ -1603,7 +1610,6 @@ function processCouponFile(file) {
       const wb = XLSX.read(ev.target.result, {type:'array'});
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-      // Row 0 = group header, Row 1 = column header, Row 2 = COUNTIF row → skip first 3 rows
       const data = [];
       for (let i = 3; i < rows.length; i++) {
         const row = rows[i];
@@ -1611,22 +1617,17 @@ function processCouponFile(file) {
         if (!brand) continue;
         const statuses = COUPON_COLS.map(col => {
           const val = String(row[col] || '').trim();
-          // status col: '진행' or '제외'. Also derive from checkbox col (True=제외, False=진행)
           if (val === '진행' || val === '제외') return val;
-          // fallback: check checkbox col (one before status col)
           const chk = String(row[col-1] || '').trim().toLowerCase();
           if (chk === 'true') return '제외';
           return '진행';
         });
-        data.push({brand, statuses});
+        data.push({brand, statuses, active: true});
       }
       couponData = data;
       couponPage = 1;
       showToast(`쿠폰 데이터 ${data.length}개 브랜드 로드 완료`);
-      document.getElementById('coupon-upload-zone').style.display='none';
-      document.getElementById('coupon-kpi').style.display='';
-      document.getElementById('coupon-toolbar').style.display='';
-      document.getElementById('coupon-table-wrap').style.display='';
+      showCouponUI();
       renderCouponKPI();
       renderCouponTable();
       saveCouponToSheets();
@@ -1637,24 +1638,40 @@ function processCouponFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
+function showCouponUI() {
+  document.getElementById('coupon-upload-zone').style.display='none';
+  document.getElementById('coupon-kpi').style.display='';
+  document.getElementById('coupon-toolbar').style.display='';
+  document.getElementById('coupon-table-wrap').style.display='';
+}
+
 function renderCouponKPI() {
   const kpiEl = document.getElementById('coupon-kpi');
-  const counts = COUPON_TYPES.map((t,i) => couponData.filter(d=>d.statuses[i]==='진행').length);
+  const activeBrands = couponData.filter(d=>d.active);
+  const counts = COUPON_TYPES.map((t,i) => activeBrands.filter(d=>d.statuses[i]==='진행').length);
+  const terminatedCount = couponData.filter(d=>!d.active).length;
   kpiEl.innerHTML = COUPON_TYPES.map((t,i)=>`
     <div class="kpi-card">
       <div class="kpi-value">${counts[i]}</div>
       <div class="kpi-label">${t} 진행</div>
     </div>
-  `).join('');
+  `).join('') + `
+    <div class="kpi-card" style="border-color:#f87171;">
+      <div class="kpi-value" style="color:#dc2626;">${terminatedCount}</div>
+      <div class="kpi-label">종료 브랜드</div>
+    </div>`;
 }
 
 function getFilteredCouponData() {
   const q = (document.getElementById('coupon-search')||{value:''}).value.toLowerCase();
   const typeFilter = (document.getElementById('coupon-type-filter')||{value:''}).value;
   const statusFilter = (document.getElementById('coupon-status-filter')||{value:''}).value;
+  const brandFilter = (document.getElementById('coupon-brand-filter')||{value:''}).value; // '활성'|'종료'|''
   const typeIdx = typeFilter ? COUPON_TYPES.indexOf(typeFilter) : -1;
   return couponData.filter(d => {
     if (q && !d.brand.toLowerCase().includes(q)) return false;
+    if (brandFilter === '활성' && !d.active) return false;
+    if (brandFilter === '종료' && d.active) return false;
     if (statusFilter && typeIdx >= 0) {
       if (d.statuses[typeIdx] !== statusFilter) return false;
     } else if (statusFilter) {
@@ -1676,25 +1693,34 @@ function renderCouponTable() {
 
   document.getElementById('coupon-count').textContent = `총 ${total}개 브랜드`;
 
-  // thead
   document.getElementById('coupon-thead').innerHTML = `<tr>
-    <th style="min-width:140px;">브랜드</th>
+    <th style="min-width:130px;">브랜드</th>
+    <th style="min-width:70px;">운영상태</th>
     ${COUPON_TYPES.map(t=>`<th style="min-width:90px;">${t}</th>`).join('')}
+    <th style="min-width:60px;">삭제</th>
   </tr>`;
 
-  // tbody
-  document.getElementById('coupon-tbody').innerHTML = page.map((d,pi)=>{
-    const realIdx = start+pi;
-    return `<tr>
+  // find real index in couponData for each filtered row
+  document.getElementById('coupon-tbody').innerHTML = page.map(d => {
+    const realIdx = couponData.indexOf(d);
+    const isActive = d.active !== false;
+    const rowStyle = isActive ? '' : 'opacity:0.5;background:#fafafa;';
+    return `<tr style="${rowStyle}">
       <td><strong>${d.brand}</strong></td>
+      <td style="text-align:center;">
+        <span class="badge ${isActive?'badge-active':'badge-gray'}" style="cursor:pointer;white-space:nowrap;"
+          onclick="toggleCouponActive(${realIdx})">${isActive?'✅ 활성':'⛔ 종료'}</span>
+      </td>
       ${d.statuses.map((s,ci)=>`
         <td style="text-align:center;">
           <span class="badge ${s==='진행'?'badge-active':'badge-out'}" style="cursor:pointer;" onclick="toggleCouponStatus(${realIdx},${ci})">${s}</span>
         </td>`).join('')}
+      <td style="text-align:center;">
+        <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;padding:2px 8px;" onclick="deleteCouponBrand(${realIdx})">🗑</button>
+      </td>
     </tr>`;
   }).join('');
 
-  // pagination
   let pages = '';
   for(let p=1;p<=totalPages;p++){
     if(p===1||p===totalPages||Math.abs(p-couponPage)<=2)
@@ -1712,11 +1738,31 @@ function toggleCouponStatus(dataIdx, couponIdx) {
   saveCouponToSheets();
 }
 
+function toggleCouponActive(dataIdx) {
+  couponData[dataIdx].active = !couponData[dataIdx].active;
+  const brand = couponData[dataIdx].brand;
+  const now = couponData[dataIdx].active;
+  showToast(`${brand} → ${now?'활성':'종료'} 처리됨`);
+  renderCouponKPI();
+  renderCouponTable();
+  saveCouponToSheets();
+}
+
+function deleteCouponBrand(dataIdx) {
+  const brand = couponData[dataIdx].brand;
+  if (!confirm(`"${brand}" 브랜드를 삭제할까요?\n삭제 후 복구할 수 없습니다.`)) return;
+  couponData.splice(dataIdx, 1);
+  renderCouponKPI();
+  renderCouponTable();
+  saveCouponToSheets();
+  showToast(`${brand} 삭제 완료`);
+}
+
 function openAddBrandModal() {
   const name = prompt('추가할 브랜드명을 입력하세요:');
   if (!name || !name.trim()) return;
   if (couponData.some(d=>d.brand===name.trim())) { showToast('이미 존재하는 브랜드입니다'); return; }
-  couponData.unshift({brand:name.trim(), statuses: Array(9).fill('진행')});
+  couponData.unshift({brand:name.trim(), statuses: Array(9).fill('진행'), active: true});
   couponPage=1;
   renderCouponKPI();
   renderCouponTable();
@@ -1726,8 +1772,8 @@ function openAddBrandModal() {
 
 function saveCouponToSheets() {
   if (!SCRIPT_URL || !couponData.length) return;
-  const rows = couponData.map(d=>[d.brand, ...d.statuses]);
-  const header = ['브랜드', ...COUPON_TYPES];
+  const rows = couponData.map(d=>[d.brand, d.active===false?'종료':'활성', ...d.statuses]);
+  const header = ['브랜드', '운영상태', ...COUPON_TYPES];
   fetch(SCRIPT_URL, {
     method:'POST',
     body: JSON.stringify({action:'saveData', sheet:'쿠폰', data:[header,...rows]}),
@@ -1741,17 +1787,27 @@ async function loadCouponFromSheets() {
     const res = await fetch(`${SCRIPT_URL}?action=getData&sheet=쿠폰`);
     const json = await res.json();
     if (!json.data || json.data.length < 2) return;
-    const rows = json.data.slice(1); // skip header
-    couponData = rows.map(row=>({
-      brand: String(row[0]||''),
-      statuses: Array.from({length:9},(_,i)=>String(row[i+1]||'진행'))
-    })).filter(d=>d.brand);
+    const header = json.data[0].map(h=>String(h));
+    const hasActiveCol = header[1] === '운영상태';
+    const rows = json.data.slice(1);
+    couponData = rows.map(row=>{
+      if (hasActiveCol) {
+        return {
+          brand: String(row[0]||''),
+          active: String(row[1]||'활성') !== '종료',
+          statuses: Array.from({length:9},(_,i)=>String(row[i+2]||'진행'))
+        };
+      } else {
+        return {
+          brand: String(row[0]||''),
+          active: true,
+          statuses: Array.from({length:9},(_,i)=>String(row[i+1]||'진행'))
+        };
+      }
+    }).filter(d=>d.brand);
     if (couponData.length) {
       couponPage=1;
-      document.getElementById('coupon-upload-zone').style.display='none';
-      document.getElementById('coupon-kpi').style.display='';
-      document.getElementById('coupon-toolbar').style.display='';
-      document.getElementById('coupon-table-wrap').style.display='';
+      showCouponUI();
       renderCouponKPI();
       renderCouponTable();
     }
