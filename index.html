@@ -103,6 +103,18 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
 .badge-blue { background: #eff6ff; color: #2563eb; }
 .badge-active { background: #dcfce7; color: #16a34a; }
 .badge-out { background: #fee2e2; color: #dc2626; }
+.memo-card { border-radius:12px; padding:14px; position:relative; box-shadow:0 2px 6px rgba(0,0,0,.08); transition:transform .15s; cursor:default; }
+.memo-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.12); }
+.memo-card-title { font-size:13px; font-weight:700; margin-bottom:6px; word-break:break-all; }
+.memo-card-content { font-size:12px; line-height:1.6; color:#374151; white-space:pre-wrap; word-break:break-all; max-height:100px; overflow:hidden; }
+.memo-card-footer { display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
+.memo-card-cat { font-size:10px; padding:2px 7px; border-radius:8px; background:rgba(0,0,0,.08); color:#374151; }
+.memo-card-actions { display:flex; gap:4px; opacity:0; transition:opacity .15s; }
+.memo-card:hover .memo-card-actions { opacity:1; }
+.memo-cat-btn { padding:4px 12px; border-radius:16px; border:1px solid var(--border); background:#fff; font-size:12px; cursor:pointer; transition:all .15s; }
+.memo-cat-btn.active, .memo-cat-btn:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+.memo-color-btn { padding:4px 12px; border-radius:8px; font-size:12px; cursor:pointer; border:2px solid transparent; transition:border .15s; }
+.memo-color-btn.selected { border-color:#4F6EF7; }
 
 /* Status select in table */
 .status-select { border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; font-size: 12px; cursor: pointer; background: #fff; }
@@ -489,10 +501,19 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
           </div>
           <ul class="todo-list" id="todo-list"></ul>
         </div>
-        <div class="card">
-          <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;">업무 메모</h3>
-          <textarea class="notes-area" id="notes-area" placeholder="업무 메모를 입력하세요..." oninput="saveNotes()"></textarea>
-          <p style="font-size:11px;color:var(--text-secondary);margin-top:8px;">자동 저장됩니다</p>
+        <div class="card" style="overflow:visible;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h3 style="font-size:16px;font-weight:600;">📌 업무 메모</h3>
+            <button class="btn btn-primary btn-sm" onclick="openMemoModal()">+ 메모 추가</button>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;" id="memo-cat-tabs">
+            <button class="memo-cat-btn active" onclick="filterMemos('')" data-cat="">전체</button>
+            <button class="memo-cat-btn" onclick="filterMemos('업무')" data-cat="업무">💼 업무</button>
+            <button class="memo-cat-btn" onclick="filterMemos('아이디어')" data-cat="아이디어">💡 아이디어</button>
+            <button class="memo-cat-btn" onclick="filterMemos('공지')" data-cat="공지">📢 공지</button>
+            <button class="memo-cat-btn" onclick="filterMemos('기타')" data-cat="기타">📎 기타</button>
+          </div>
+          <div id="memo-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-height:480px;overflow-y:auto;"></div>
         </div>
       </div>
     </div>
@@ -589,6 +610,46 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
   </div>
 </div>
 
+<!-- Modal: Memo -->
+<div class="modal-overlay" id="memo-modal" style="display:none;">
+  <div class="modal">
+    <h3 id="memo-modal-title">메모 추가</h3>
+    <input type="hidden" id="memo-edit-idx" value="-1">
+    <div class="form-group">
+      <label>카테고리</label>
+      <select id="memo-cat">
+        <option>업무</option>
+        <option>아이디어</option>
+        <option>공지</option>
+        <option>기타</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>제목</label>
+      <input type="text" id="memo-title" placeholder="메모 제목">
+    </div>
+    <div class="form-group">
+      <label>내용</label>
+      <textarea id="memo-content" rows="5" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:14px;font-family:inherit;resize:vertical;" placeholder="내용을 입력하세요..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>색상</label>
+      <div style="display:flex;gap:8px;">
+        <span class="memo-color-btn" data-color="#fef9c3" style="background:#fef9c3;" onclick="selectMemoColor('#fef9c3')">노랑</span>
+        <span class="memo-color-btn" data-color="#dcfce7" style="background:#dcfce7;" onclick="selectMemoColor('#dcfce7')">초록</span>
+        <span class="memo-color-btn" data-color="#dbeafe" style="background:#dbeafe;" onclick="selectMemoColor('#dbeafe')">파랑</span>
+        <span class="memo-color-btn" data-color="#fce7f3" style="background:#fce7f3;" onclick="selectMemoColor('#fce7f3')">핑크</span>
+        <span class="memo-color-btn" data-color="#f3f4f6" style="background:#f3f4f6;" onclick="selectMemoColor('#f3f4f6')">회색</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('memo-modal')">취소</button>
+      <button id="memo-delete-btn" class="btn" style="background:#fee2e2;color:#dc2626;display:none;" onclick="deleteMemo()">삭제</button>
+      <button class="btn btn-primary" onclick="saveMemo()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Settings -->
 <div class="modal-overlay" id="settings-modal" style="display:none;">
   <div class="modal">
@@ -613,7 +674,7 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
 // ============================================================
 // STATE
 // ============================================================
-let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwIZgz-FnDJn_xMCLjfjLejfw1YECm3bcOyuJVnxVKx-jSEN4ANZA1aIOp72XrSg7gqUw/exec';
+let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymRMUtPu1PZpbaPBBVj_Ya9VgtREhfoQxcpepYfMotnUQRrDaMcGNYEaGIfAZWzjOC/exec';
 let invData = []; // parsed inventory rows
 let invFiltered = [];
 let invPage = 1;
@@ -631,6 +692,9 @@ let editingEventIdx = null;
 let salesData = JSON.parse(localStorage.getItem('salesData') || '[]');
 let todosData = JSON.parse(localStorage.getItem('todosData') || '[]');
 let notesData = localStorage.getItem('notesData') || '';
+let memosData = JSON.parse(localStorage.getItem('memosData') || '[]');
+let memoColorSelected = '#fef9c3';
+let memoCatFilter = '';
 
 let barChart = null, donutChart = null;
 
@@ -669,14 +733,21 @@ function init() {
   initCalendar();
   initSales();
   initTodos();
-  document.getElementById('notes-area').value = notesData;
+  renderMemos();
 
   // Load from GSheet if URL set
   if (SCRIPT_URL) {
     // 재고: Google Sheets에서 불러오기 (업로드한 적 있으면 자동 복원)
+    // 재고 로드 (2D배열: 1행=헤더, 2행~=데이터)
     loadSheetData('재고').then(d => {
-      if (d && d.length) {
-        invData = d;
+      if (!d || d.length < 2) return;
+      const header = d[0].map(h => String(h));
+      invData = d.slice(1).map(row => {
+        const obj = {};
+        header.forEach((h,i) => obj[h] = row[i] !== undefined ? row[i] : '');
+        return obj;
+      }).filter(r => r['SKU'] || r['스타일명']);
+      if (invData.length) {
         renderInvKPI();
         populateInvBrandFilter();
         filterInventory();
@@ -684,44 +755,62 @@ function init() {
         showToast(`📦 재고 ${invData.length.toLocaleString()}건 불러옴`);
       }
     }).catch(()=>{});
-    loadSheetData('캘린더').then(d => { if (d && d.length) { calEvents = d; localStorage.setItem('calEvents', JSON.stringify(calEvents)); renderCalendar(); } }).catch(()=>{});
-    loadSheetData('매출').then(d => { if (d && d.length) { salesRawData = d; initSales(); } }).catch(()=>{});
+
+    // 캘린더 로드
+    loadSheetData('캘린더').then(d => {
+      if (!d || d.length < 2) return;
+      const header = d[0].map(h => String(h));
+      calEvents = d.slice(1).map(row => {
+        const obj = {};
+        header.forEach((h,i) => obj[h] = row[i] !== undefined ? row[i] : '');
+        return obj;
+      });
+      localStorage.setItem('calEvents', JSON.stringify(calEvents));
+      renderCalendar();
+    }).catch(()=>{});
+
+    // 매출 로드
+    loadSheetData('매출').then(d => {
+      if (!d || d.length < 2) return;
+      const header = d[0].map(h => String(h));
+      salesRawData = d.slice(1).map(row => {
+        const obj = {};
+        header.forEach((h,i) => obj[h] = row[i] !== undefined ? row[i] : '');
+        return obj;
+      });
+      initSales();
+    }).catch(()=>{});
+
+    // 할일 로드
     loadSheetData('할일').then(d => {
-      if (d && d.length) {
-        // d는 [{text,priority,...}] 또는 [['text','priority',...], [...]] 형태일 수 있음
-        const first = d[0];
-        if (Array.isArray(first)) {
-          // 2D 배열: 첫 행 헤더, 나머지 데이터
-          const header = first;
-          todosData = d.slice(1).map(row => {
-            const obj = {};
-            header.forEach((h,i) => obj[h] = row[i]||'');
-            obj.done = obj.done === 'true' || obj.done === true;
-            return obj;
-          }).filter(t => t.text);
-        } else {
-          // 객체 배열
-          todosData = d.filter(t => t && t.text);
-          todosData.forEach(t => { t.done = t.done === 'true' || t.done === true; });
-        }
-        localStorage.setItem('todosData', JSON.stringify(todosData));
-        renderTodos();
-      }
+      if (!d || d.length < 2) return;
+      const header = d[0].map(h => String(h));
+      todosData = d.slice(1).map(row => {
+        const obj = {};
+        header.forEach((h,i) => obj[h] = row[i] !== undefined ? String(row[i]) : '');
+        obj.done = obj.done === 'true' || obj.done === true;
+        return obj;
+      }).filter(t => t.text);
+      localStorage.setItem('todosData', JSON.stringify(todosData));
+      renderTodos();
     }).catch(()=>{});
+
+    // 메모 로드
     loadSheetData('메모').then(d => {
-      if (d && d.length) {
-        // data[0] = 헤더행, data[1] = [{content:...}] 또는 ['내용']
-        const row = d[0];
-        const text = typeof row === 'object' && row !== null && !Array.isArray(row)
-          ? (row.content || '')
-          : (Array.isArray(row) ? row[0] : row) || '';
-        if (text) {
-          notesData = String(text);
-          localStorage.setItem('notesData', notesData);
-          document.getElementById('notes-area').value = notesData;
-        }
+      if (!d || d.length < 2) return;
+      const header = d[0].map(h => String(h));
+      const loaded = d.slice(1).map(row => {
+        const obj = {};
+        header.forEach((h,i) => obj[h] = row[i] !== undefined ? String(row[i]) : '');
+        return obj;
+      }).filter(m => m.title || m.content);
+      if (loaded.length) {
+        memosData = loaded;
+        localStorage.setItem('memosData', JSON.stringify(memosData));
+        renderMemos();
       }
     }).catch(()=>{});
+
     loadCouponFromSheets().catch(()=>{});
   }
 }
@@ -1641,21 +1730,125 @@ function saveTodosToSheets() {
   }).catch(()=>{});
 }
 
-let notesTimer = null;
-function saveNotes() {
-  clearTimeout(notesTimer);
-  notesTimer = setTimeout(() => {
-    notesData = document.getElementById('notes-area').value;
-    localStorage.setItem('notesData', notesData);
-    // 구글 시트에 저장: 헤더 + 내용 1행
-    if (SCRIPT_URL) {
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({action:'saveData', sheet:'메모', data:[['content'],[notesData]]}),
-        headers: {'Content-Type':'text/plain'}
-      }).catch(()=>{});
-    }
-  }, 800);
+// ============================================================
+// MEMOS
+// ============================================================
+const CAT_EMOJI = { '업무':'💼', '아이디어':'💡', '공지':'📢', '기타':'📎' };
+
+function openMemoModal(idx) {
+  const isEdit = idx !== undefined;
+  document.getElementById('memo-modal-title').textContent = isEdit ? '메모 수정' : '메모 추가';
+  document.getElementById('memo-edit-idx').value = isEdit ? idx : -1;
+  document.getElementById('memo-delete-btn').style.display = isEdit ? '' : 'none';
+  if (isEdit) {
+    const m = memosData[idx];
+    document.getElementById('memo-cat').value = m.cat || '업무';
+    document.getElementById('memo-title').value = m.title || '';
+    document.getElementById('memo-content').value = m.content || '';
+    selectMemoColor(m.color || '#fef9c3');
+  } else {
+    document.getElementById('memo-cat').value = '업무';
+    document.getElementById('memo-title').value = '';
+    document.getElementById('memo-content').value = '';
+    selectMemoColor('#fef9c3');
+  }
+  document.getElementById('memo-modal').style.display = 'flex';
+}
+
+function selectMemoColor(color) {
+  memoColorSelected = color;
+  document.querySelectorAll('.memo-color-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.color === color);
+  });
+}
+
+function saveMemo() {
+  const title = document.getElementById('memo-title').value.trim();
+  const content = document.getElementById('memo-content').value.trim();
+  if (!title && !content) { showToast('제목 또는 내용을 입력하세요.'); return; }
+  const idx = parseInt(document.getElementById('memo-edit-idx').value);
+  const memo = {
+    cat: document.getElementById('memo-cat').value,
+    title,
+    content,
+    color: memoColorSelected,
+    updated: new Date().toLocaleDateString('ko-KR')
+  };
+  if (idx >= 0) {
+    memosData[idx] = memo;
+    showToast('메모 수정 완료');
+  } else {
+    memosData.unshift(memo);
+    showToast('메모 추가 완료');
+  }
+  closeModal('memo-modal');
+  saveMemosToSheets();
+  renderMemos();
+}
+
+function deleteMemo() {
+  const idx = parseInt(document.getElementById('memo-edit-idx').value);
+  if (idx < 0) return;
+  if (!confirm('이 메모를 삭제할까요?')) return;
+  memosData.splice(idx, 1);
+  closeModal('memo-modal');
+  saveMemosToSheets();
+  renderMemos();
+  showToast('메모 삭제 완료');
+}
+
+function filterMemos(cat) {
+  memoCatFilter = cat;
+  document.querySelectorAll('.memo-cat-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.cat === cat);
+  });
+  renderMemos();
+}
+
+function renderMemos() {
+  const grid = document.getElementById('memo-grid');
+  if (!grid) return;
+  const filtered = memoCatFilter ? memosData.filter(m => m.cat === memoCatFilter) : memosData;
+  if (!filtered.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-secondary);font-size:14px;">메모가 없습니다.<br>+ 메모 추가로 새 메모를 작성하세요!</div>';
+    return;
+  }
+  grid.innerHTML = filtered.map(m => {
+    const realIdx = memosData.indexOf(m);
+    const emoji = CAT_EMOJI[m.cat] || '📎';
+    return `<div class="memo-card" style="background:${m.color||'#fef9c3'};">
+      <div class="memo-card-title">${m.title || '(제목 없음)'}</div>
+      <div class="memo-card-content">${m.content || ''}</div>
+      <div class="memo-card-footer">
+        <span class="memo-card-cat">${emoji} ${m.cat||'기타'}</span>
+        <div class="memo-card-actions">
+          <button class="btn btn-sm" style="padding:2px 8px;background:rgba(0,0,0,.08);" onclick="openMemoModal(${realIdx})">✏️</button>
+          <button class="btn btn-sm" style="padding:2px 8px;background:rgba(220,38,38,.12);color:#dc2626;" onclick="quickDeleteMemo(${realIdx})">🗑</button>
+        </div>
+      </div>
+      ${m.updated ? `<div style="font-size:10px;color:#9ca3af;margin-top:4px;">${m.updated}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function quickDeleteMemo(idx) {
+  if (!confirm('이 메모를 삭제할까요?')) return;
+  memosData.splice(idx, 1);
+  saveMemosToSheets();
+  renderMemos();
+  showToast('메모 삭제 완료');
+}
+
+function saveMemosToSheets() {
+  localStorage.setItem('memosData', JSON.stringify(memosData));
+  if (!SCRIPT_URL) return;
+  const header = ['cat','title','content','color','updated'];
+  const rows = memosData.map(m => [m.cat||'', m.title||'', m.content||'', m.color||'', m.updated||'']);
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({action:'saveData', sheet:'메모', data:[header, ...rows]}),
+    headers: {'Content-Type':'text/plain'}
+  }).catch(()=>{});
 }
 
 // ============================================================
@@ -1873,27 +2066,25 @@ function saveCouponToSheets() {
 async function loadCouponFromSheets() {
   if (!SCRIPT_URL) return;
   try {
-    const res = await fetch(`${SCRIPT_URL}?action=getData&sheet=쿠폰`);
-    const json = await res.json();
-    if (!json.data || json.data.length < 2) return;
-    const header = json.data[0].map(h=>String(h));
+    const d = await loadSheetData('쿠폰');
+    if (!d || d.length < 2) return;
+    const header = d[0].map(h => String(h));
     const hasActiveCol = header[1] === '운영상태';
-    const rows = json.data.slice(1);
-    couponData = rows.map(row=>{
+    couponData = d.slice(1).map(row => {
       if (hasActiveCol) {
         return {
           brand: String(row[0]||''),
           active: String(row[1]||'활성') !== '종료',
-          statuses: Array.from({length:9},(_,i)=>String(row[i+2]||'진행'))
+          statuses: Array.from({length:9},(_,i) => String(row[i+2]||'진행'))
         };
       } else {
         return {
           brand: String(row[0]||''),
           active: true,
-          statuses: Array.from({length:9},(_,i)=>String(row[i+1]||'진행'))
+          statuses: Array.from({length:9},(_,i) => String(row[i+1]||'진행'))
         };
       }
-    }).filter(d=>d.brand);
+    }).filter(d => d.brand);
     if (couponData.length) {
       couponPage=1;
       showCouponUI();
