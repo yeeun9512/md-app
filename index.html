@@ -525,9 +525,15 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
 <div class="modal-overlay" id="event-modal" style="display:none;">
   <div class="modal">
     <h3 id="event-modal-title">이벤트 추가</h3>
-    <div class="form-group">
-      <label>날짜</label>
-      <input type="date" id="ev-date">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label>시작일</label>
+        <input type="date" id="ev-start-date">
+      </div>
+      <div class="form-group">
+        <label>종료일</label>
+        <input type="date" id="ev-end-date">
+      </div>
     </div>
     <div class="form-group">
       <label>유형</label>
@@ -757,13 +763,19 @@ function init() {
     // 재고: Google Sheets에서 불러오기 (업로드한 적 있으면 자동 복원)
     // 재고 로드 (2D배열: 1행=헤더, 2행~=데이터)
     loadSheetData('재고').then(d => {
-      if (!d || d.length < 2) return;
+      if (!d || !Array.isArray(d) || d.length < 2) return;
       const header = d[0].map(h => String(h));
       invData = d.slice(1).map(row => {
         const obj = {};
         header.forEach((h,i) => obj[h] = row[i] !== undefined ? row[i] : '');
         return obj;
-      }).filter(r => r['SKU'] || r['스타일명']);
+      }).filter(r => r.sku || r.name).map(r => ({
+        ...r,
+        price: Number(r.price) || 0,
+        warehouseQty: Number(r.warehouseQty) || 0,
+        storeQty: Number(r.storeQty) || 0,
+        onlineQty: Number(r.onlineQty) || 0,
+      }));
       if (invData.length) {
         renderInvKPI();
         populateInvBrandFilter();
@@ -773,15 +785,34 @@ function init() {
       }
     }).catch(()=>{});
 
-    // 캘린더 로드
-    loadSheetData('캘린더').then(d => {
-      if (!d || d.length < 2) return;
+    // 상품 로드
+    loadSheetData('상품').then(d => {
+      if (!d || !Array.isArray(d) || d.length < 2) return;
       const header = d[0].map(h => String(h));
-      calEvents = d.slice(1).map(row => {
+      const loaded = d.slice(1).map(row => {
         const obj = {};
         header.forEach((h,i) => obj[h] = row[i] !== undefined ? row[i] : '');
         return obj;
-      });
+      }).filter(r => r.code);
+      if (!loaded.length) return;
+      prodData = loaded.map(r => ({...r, price: Number(r.price)||0, views: Number(r.views)||0, orders: Number(r.orders)||0, sales: Number(r.sales)||0}));
+      renderProdKPI();
+      filterProducts();
+      document.getElementById('prod-upload-zone').style.display = 'none';
+      showToast(`🛍️ 상품 ${prodData.length.toLocaleString()}건 불러옴`);
+    }).catch(()=>{});
+
+    // 캘린더 로드
+    loadSheetData('캘린더').then(d => {
+      if (!d || !Array.isArray(d) || d.length < 2) return;
+      const header = d[0].map(h => String(h));
+      const loaded = d.slice(1).map(row => {
+        const obj = {};
+        header.forEach((h,i) => obj[h] = row[i] !== undefined ? String(row[i]) : '');
+        return obj;
+      }).filter(e => e.title);
+      if (!loaded.length) return;
+      calEvents = loaded;
       localStorage.setItem('calEvents', JSON.stringify(calEvents));
       renderCalendar();
     }).catch(()=>{});
@@ -1210,7 +1241,10 @@ function processProdFile(file) {
       renderProdKPI();
       filterProducts();
       document.getElementById('prod-upload-zone').style.display = 'none';
-      showToast(`상품 데이터 ${prodData.length}건 로드 완료`);
+      showToast(`상품 데이터 ${prodData.length}건 로드 중... Google Sheets에 저장합니다.`);
+      saveSheetData('상품', prodData).then(() => {
+        showToast(`✅ 상품 ${prodData.length.toLocaleString()}건 Google Sheets 저장 완료!`);
+      }).catch(() => {});
     } catch(err) {
       console.error(err);
       showToast('CSV 파싱 오류: ' + err.message);
@@ -1349,6 +1383,20 @@ function changeMonth(delta) {
   renderCalendar();
 }
 
+function evDateStr(y, m, d) {
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function evNorm(ev) {
+  // 기존 date 단일 필드 호환
+  const s = ev.startDate || ev.date || '';
+  const e = ev.endDate || ev.date || s;
+  return { start: s, end: e };
+}
+function evIncludesDate(ev, dateStr) {
+  const { start, end } = evNorm(ev);
+  return start && dateStr >= start && dateStr <= end;
+}
+
 function renderCalendar() {
   const title = `${calYear}년 ${calMonth + 1}월`;
   document.getElementById('cal-title').textContent = title;
@@ -1363,19 +1411,19 @@ function renderCalendar() {
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
   const prevDays = new Date(calYear, calMonth, 0).getDate();
 
-  // Prev month days
   for (let i = firstDay - 1; i >= 0; i--) {
     html += `<div class="cal-day other-month"><span class="day-num" style="color:var(--text-secondary)">${prevDays - i}</span></div>`;
   }
 
-  // Current month
   for (let d = 1; d <= daysInMonth; d++) {
     const isToday = today.getFullYear() === calYear && today.getMonth() === calMonth && today.getDate() === d;
-    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dayEvents = calEvents.filter(e => e.date === dateStr);
-    const evHTML = dayEvents.map((e, i) => {
-      const evIdx = calEvents.indexOf(e);
-      return `<div class="cal-event ev-${e.type}" onclick="editEvent(event,${evIdx})" title="${e.title}">${e.title}</div>`;
+    const dateStr = evDateStr(calYear, calMonth, d);
+    const dayEvents = calEvents.map((e, i) => ({e, i})).filter(({e}) => evIncludesDate(e, dateStr));
+    const evHTML = dayEvents.map(({e, i}) => {
+      const {start, end} = evNorm(e);
+      const isFirst = start === dateStr;
+      const label = isFirst ? e.title : (start !== end ? `↳ ${e.title}` : e.title);
+      return `<div class="cal-event ev-${e.type}" onclick="editEvent(event,${i})" title="${e.title}">${label}</div>`;
     }).join('');
     html += `<div class="cal-day ${isToday?'today':''}" onclick="openEventModal('${dateStr}')">
       <span class="day-num">${d}</span>
@@ -1383,7 +1431,6 @@ function renderCalendar() {
     </div>`;
   }
 
-  // Next month fill
   const total = firstDay + daysInMonth;
   const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
   for (let i = 1; i <= remaining; i++) {
@@ -1395,7 +1442,8 @@ function renderCalendar() {
 
 function openEventModal(dateStr) {
   editingEventIdx = null;
-  document.getElementById('ev-date').value = dateStr;
+  document.getElementById('ev-start-date').value = dateStr;
+  document.getElementById('ev-end-date').value = dateStr;
   document.getElementById('ev-type').value = '프로모션';
   document.getElementById('ev-title').value = '';
   document.getElementById('ev-content').value = '';
@@ -1408,7 +1456,9 @@ function editEvent(e, idx) {
   e.stopPropagation();
   editingEventIdx = idx;
   const ev = calEvents[idx];
-  document.getElementById('ev-date').value = ev.date;
+  const {start, end} = evNorm(ev);
+  document.getElementById('ev-start-date').value = start;
+  document.getElementById('ev-end-date').value = end;
   document.getElementById('ev-type').value = ev.type;
   document.getElementById('ev-title').value = ev.title;
   document.getElementById('ev-content').value = ev.content || '';
@@ -1418,13 +1468,17 @@ function editEvent(e, idx) {
 }
 
 function saveEvent() {
+  const startDate = document.getElementById('ev-start-date').value;
+  const endDate = document.getElementById('ev-end-date').value;
   const ev = {
-    date: document.getElementById('ev-date').value,
+    startDate,
+    endDate: endDate >= startDate ? endDate : startDate,
     type: document.getElementById('ev-type').value,
     title: document.getElementById('ev-title').value,
     content: document.getElementById('ev-content').value,
   };
   if (!ev.title) { showToast('제목을 입력하세요.'); return; }
+  if (!ev.startDate) { showToast('시작일을 입력하세요.'); return; }
   if (editingEventIdx !== null) calEvents[editingEventIdx] = ev;
   else calEvents.push(ev);
   localStorage.setItem('calEvents', JSON.stringify(calEvents));
