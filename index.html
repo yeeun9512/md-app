@@ -288,7 +288,7 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
       <div id="inv-kpi" class="kpi-grid" style="display:none;"></div>
 
       <div class="toolbar" id="inv-toolbar" style="display:none;">
-        <input type="text" id="inv-search" placeholder="SKU, 상품명 검색..." oninput="filterInventory()">
+        <input type="text" id="inv-search" placeholder="스타일코드, 참고상품명 검색..." oninput="filterInventory()">
         <select id="inv-cat" onchange="filterInventory()">
           <option value="">전체 카테고리</option>
           <option>선글라스</option><option>안경</option><option>AI안경</option>
@@ -300,6 +300,7 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
         <select id="inv-brand" onchange="filterInventory()">
           <option value="">전체 브랜드</option>
         </select>
+        <button class="btn btn-secondary btn-sm" onclick="reuploadInv()">🔄 재업로드</button>
         <span class="page-info" id="inv-count"></span>
       </div>
 
@@ -307,8 +308,8 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
         <table>
           <thead>
             <tr>
-              <th onclick="sortTable('inv','sku')" style="cursor:pointer;">SKU <span id="inv-sort-sku">↕</span></th>
-              <th onclick="sortTable('inv','name')" style="cursor:pointer;">스타일명 <span id="inv-sort-name">↕</span></th>
+              <th onclick="sortTable('inv','sku')" style="cursor:pointer;">스타일코드 <span id="inv-sort-sku">↕</span></th>
+              <th onclick="sortTable('inv','name')" style="cursor:pointer;">참고상품명 <span id="inv-sort-name">↕</span></th>
               <th onclick="sortTable('inv','category')" style="cursor:pointer;">카테고리 <span id="inv-sort-category">↕</span></th>
               <th onclick="sortTable('inv','brand')" style="cursor:pointer;">브랜드 <span id="inv-sort-brand">↕</span></th>
               <th onclick="sortTable('inv','price')" style="cursor:pointer;">소비자가 <span id="inv-sort-price">↕</span></th>
@@ -328,9 +329,9 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
     <div class="tab-pane" id="tab-products">
       <div class="upload-zone" id="prod-upload-zone" onclick="document.getElementById('prod-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'prod-upload-zone')" ondrop="handleDrop(event,'products')">
         <div class="upload-icon">📋</div>
-        <p><strong>CMS 상품 CSV</strong> 파일을 업로드하세요</p>
+        <p><strong>CMS 상품 CSV / XLSX</strong> 파일을 업로드하세요</p>
         <p style="font-size:12px;margin-top:6px;">클릭하거나 파일을 드래그하세요</p>
-        <input type="file" id="prod-file" accept=".csv" onchange="handleProdFile(event)">
+        <input type="file" id="prod-file" accept=".csv,.xlsx,.xls" onchange="handleProdFile(event)">
       </div>
 
       <div id="prod-kpi" class="kpi-grid" style="display:none;"></div>
@@ -345,6 +346,7 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
           <option value="">전체 상태</option>
           <option>판매중</option><option>숨김</option><option>품절</option>
         </select>
+        <button class="btn btn-secondary btn-sm" onclick="reuploadProd()">🔄 재업로드</button>
         <span class="page-info" id="prod-count"></span>
       </div>
 
@@ -1029,12 +1031,12 @@ function processInvFile(file) {
       }
 
       invData = dataRows.map((row, rowIdx) => {
-        const sku = col(row, 'SKU');
+        const sku = col(row, '스타일코드') || col(row, 'SKU');
         if (!sku) return null;
         return {
           _rowIdx: rowIdx,
           sku,
-          name: col(row, '스타일명'),
+          name: col(row, '참고상품명') || col(row, '스타일명'),
           brand: parseBrand(col(row, '서브브랜드')),
           category: parseCategory(col(row, '복종')),
           price: numCol(row, '소비자가'),
@@ -1106,34 +1108,70 @@ function populateInvBrandFilter() {
 }
 
 // ============================================================
+// REUPLOAD
+// ============================================================
+function reuploadInv() {
+  invData = []; invFiltered = [];
+  document.getElementById('inv-upload-zone').style.display = 'block';
+  document.getElementById('inv-toolbar').style.display = 'none';
+  document.getElementById('inv-table-wrap').style.display = 'none';
+  document.getElementById('inv-kpi').style.display = 'none';
+  document.getElementById('inv-pagination').innerHTML = '';
+  document.getElementById('hot-items-section').style.display = 'none';
+  document.getElementById('inv-file').value = '';
+}
+function reuploadProd() {
+  prodData = []; prodFiltered = [];
+  document.getElementById('prod-upload-zone').style.display = 'block';
+  document.getElementById('prod-toolbar').style.display = 'none';
+  document.getElementById('prod-table-wrap').style.display = 'none';
+  document.getElementById('prod-kpi').style.display = 'none';
+  document.getElementById('prod-pagination').innerHTML = '';
+  document.getElementById('prod-file').value = '';
+  renderHotItems();
+}
+
+// ============================================================
 // HOT ITEMS
 // ============================================================
 function renderHotItems() {
   const sec = document.getElementById('hot-items-section');
-  if (!invData.length || !prodData.length) { sec.style.display = 'none'; return; }
+  if (!prodData.length) { sec.style.display = 'none'; return; }
 
   const HOT_LIMIT = 20;
   const STOCK_WARN = 3;
+  const hasInv = invData.length > 0;
 
+  function normalize(s) { return String(s||'').toLowerCase().replace(/[\s\-_\[\]()]/g,''); }
   function findInv(prod) {
-    return invData.find(r => r.sku && prod.code && r.sku === prod.code)
-        || invData.find(r => r.name && prod.refName && prod.refName.length > 2 && r.name.includes(prod.refName));
+    if (!hasInv) return null;
+    const pName = normalize(prod.refName || prod.name);
+    // 1) 참고상품명 정확 매칭
+    let r = invData.find(r => normalize(r.name) === pName);
+    if (r) return r;
+    // 2) 참고상품명 앞 6자 포함 매칭
+    const key = pName.slice(0, 6);
+    if (key.length >= 4) r = invData.find(r => normalize(r.name).includes(key) || pName.includes(normalize(r.name).slice(0,6)));
+    if (r) return r;
+    // 3) 스타일코드 === 상품코드 폴백
+    r = invData.find(r => r.sku && prod.code && normalize(r.sku) === normalize(prod.code));
+    return r || null;
   }
 
   const top20 = [...prodData].sort((a,b) => b.sales - a.sales).slice(0, HOT_LIMIT);
   const maxSales = top20[0]?.sales || 1;
 
   // 🔴 잘 팔리는데 품절
-  const soldOut = top20.map((p, i) => ({p, inv: findInv(p), rank: i+1}))
-    .filter(({inv}) => inv && inv.status === '강제품절');
+  const soldOut = hasInv ? top20.map((p, i) => ({p, inv: findInv(p), rank: i+1}))
+    .filter(({inv}) => inv && inv.status === '강제품절') : [];
 
   // 🟠 재고 3개 이하 (품절 제외)
-  const lowStock = top20.map((p, i) => ({p, inv: findInv(p), rank: i+1}))
-    .filter(({inv}) => inv && inv.status !== '강제품절' && Number(inv.warehouseQty) <= STOCK_WARN);
+  const lowStock = hasInv ? top20.map((p, i) => ({p, inv: findInv(p), rank: i+1}))
+    .filter(({inv}) => inv && inv.status !== '강제품절' && Number(inv.warehouseQty) <= STOCK_WARN) : [];
 
-  // 🟡 조회수 높은데 전환율 낮음
+  // 🟡 조회수 높은데 전환율 낮음 (상품 데이터만 있어도 표시)
   const highViewLow = [...prodData]
-    .filter(p => p.views >= 300 && p.views > 0)
+    .filter(p => p.views >= 100 && p.views > 0)
     .map(p => ({p, inv: findInv(p), rate: p.sales / p.views}))
     .filter(({rate}) => rate < 0.02)
     .sort((a,b) => b.p.views - a.p.views)
@@ -1336,16 +1374,54 @@ function handleProdFile(e) { processProdFile(e.target.files[0]); }
 
 function processProdFile(file) {
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
+  // XLSX 파일이면 SheetJS로 처리
+  if (file.name.match(/\.xlsx?$/i)) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        if (rawRows.length < 2) { showToast('데이터가 없습니다.'); return; }
+        parseProdRows(rawRows[0].map(String), rawRows.slice(1));
+      } catch(err) { console.error(err); showToast('파일 파싱 오류: ' + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+    return;
+  }
+  // CSV — UTF-8 먼저, 한글 깨지면 EUC-KR 재시도
+  const readerUtf = new FileReader();
+  readerUtf.onload = function(e) {
     try {
-      const text = e.target.result;
+      let text = e.target.result;
       const rows = parseCSV(text);
-      if (rows.length < 2) { showToast('데이터가 없습니다.'); return; }
-
-      const headers = rows[0];
       const hi = {};
-      headers.forEach((h, i) => { if (h) hi[h.trim()] = i; });
+      if (rows.length > 0) rows[0].forEach((h,i) => { if(h) hi[h.trim()] = i; });
+      // 헤더에 한글 키가 없으면 EUC-KR로 재시도
+      if (!hi['상품코드'] && !hi['상품명']) {
+        const readerEuc = new FileReader();
+        readerEuc.onload = function(e2) {
+          try {
+            const text2 = e2.target.result;
+            const rows2 = parseCSV(text2);
+            if (rows2.length < 2) { showToast('데이터가 없습니다.'); return; }
+            parseProdRows(rows2[0].map(String), rows2.slice(1));
+          } catch(err) { showToast('CSV 파싱 오류: ' + err.message); }
+        };
+        readerEuc.readAsText(file, 'EUC-KR');
+        return;
+      }
+      if (rows.length < 2) { showToast('데이터가 없습니다.'); return; }
+      parseProdRows(rows[0].map(String), rows.slice(1));
+    } catch(err) { console.error(err); showToast('CSV 파싱 오류: ' + err.message); }
+  };
+  readerUtf.readAsText(file, 'UTF-8');
+}
+
+function parseProdRows(headerRow, dataRows) {
+  try {
+      const hi = {};
+      headerRow.forEach((h, i) => { if (h) hi[h.trim()] = i; });
 
       function col(row, name) {
         const idx = hi[name];
@@ -1372,7 +1448,7 @@ function processProdFile(file) {
         return v || '-';
       }
 
-      prodData = rows.slice(1).map((row, i) => {
+      prodData = dataRows.map((row, i) => {
         const code = col(row, '상품코드');
         if (!code) return null;
         return {
@@ -1397,12 +1473,10 @@ function processProdFile(file) {
       saveSheetData('상품', prodData).then(() => {
         showToast(`✅ 상품 ${prodData.length.toLocaleString()}건 Google Sheets 저장 완료!`);
       }).catch(() => {});
-    } catch(err) {
-      console.error(err);
-      showToast('CSV 파싱 오류: ' + err.message);
-    }
-  };
-  reader.readAsText(file, 'UTF-8');
+  } catch(err) {
+    console.error(err);
+    showToast('CSV 파싱 오류: ' + err.message);
+  }
 }
 
 function parseCSV(text) {
