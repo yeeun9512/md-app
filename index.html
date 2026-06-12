@@ -255,6 +255,9 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
     <div class="nav-item" onclick="switchTab('coupons')" data-tab="coupons">
       <span class="icon">🎟️</span> 쿠폰관리
     </div>
+    <div class="nav-item" onclick="switchTab('brands')" data-tab="brands">
+      <span class="icon">🏷️</span> 브랜드관리
+    </div>
     <div class="nav-item" onclick="switchTab('todos')" data-tab="todos">
       <span class="icon">✅</span> 할 일 / 메모
     </div>
@@ -316,7 +319,7 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
               <th onclick="sortTable('inv','status')" style="cursor:pointer;">상태 <span id="inv-sort-status">↕</span></th>
               <th onclick="sortTable('inv','warehouseQty')" style="cursor:pointer;">창고재고 <span id="inv-sort-warehouseQty">↕</span></th>
               <th onclick="sortTable('inv','storeQty')" style="cursor:pointer;">매장재고 <span id="inv-sort-storeQty">↕</span></th>
-              <th onclick="sortTable('inv','onlineQty')" style="cursor:pointer;">자사몰연동 <span id="inv-sort-onlineQty">↕</span></th>
+              <th onclick="sortTable('inv','onlineQty')" style="cursor:pointer;">공용재고 <span id="inv-sort-onlineQty">↕</span></th>
             </tr>
           </thead>
           <tbody id="inv-tbody"></tbody>
@@ -507,6 +510,54 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
       <div class="pagination" id="coupon-pagination"></div>
     </div>
 
+    <!-- ===================== 브랜드관리 ===================== -->
+    <div class="tab-pane" id="tab-brands">
+      <div class="upload-zone" id="brand-upload-zone" onclick="document.getElementById('brand-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'brand-upload-zone')" ondrop="handleDrop(event,'brands')">
+        <div class="upload-icon">🏷️</div>
+        <p><strong>브랜드 목록 XLSX / CSV</strong> 파일을 업로드하세요</p>
+        <p style="font-size:12px;margin-top:6px;">브랜드명, 운영상태, 채널, 카테고리, 메모 컬럼 포함</p>
+        <input type="file" id="brand-file" accept=".xlsx,.xls,.csv" onchange="handleBrandFile(event)">
+      </div>
+      <div id="brand-kpi" class="kpi-grid" style="display:none;"></div>
+      <div class="toolbar" id="brand-toolbar" style="display:none;">
+        <input type="text" id="brand-search" placeholder="브랜드명 검색..." oninput="filterBrands()">
+        <select id="brand-status-filter" onchange="filterBrands()">
+          <option value="">전체 상태</option>
+          <option value="활성">활성</option>
+          <option value="종료">종료</option>
+        </select>
+        <select id="brand-channel-filter" onchange="filterBrands()">
+          <option value="">전체 채널</option>
+          <option value="온라인">온라인</option>
+          <option value="오프라인전용">오프라인전용</option>
+          <option value="온+오프">온+오프</option>
+        </select>
+        <select id="brand-cat-filter" onchange="filterBrands()">
+          <option value="">전체 카테고리</option>
+          <option>선글라스</option><option>안경</option><option>AI안경</option><option>렌즈</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openBrandModal()">+ 브랜드 추가</button>
+        <button class="btn btn-secondary btn-sm" onclick="reuploadBrand()">🔄 재업로드</button>
+        <span class="page-info" id="brand-count"></span>
+      </div>
+      <div id="brand-table-wrap" class="table-wrap" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortBrands('name')" style="cursor:pointer;">브랜드명 <span id="bsort-name">↕</span></th>
+              <th onclick="sortBrands('status')" style="cursor:pointer;">운영상태 <span id="bsort-status">↕</span></th>
+              <th onclick="sortBrands('channel')" style="cursor:pointer;">채널 <span id="bsort-channel">↕</span></th>
+              <th onclick="sortBrands('category')" style="cursor:pointer;">카테고리 <span id="bsort-category">↕</span></th>
+              <th>메모</th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="brand-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="brand-pagination"></div>
+    </div>
+
     <!-- ===================== 할 일 / 메모 ===================== -->
     <div class="tab-pane" id="tab-todos">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
@@ -678,6 +729,54 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
   </div>
 </div>
 
+<!-- Modal: Brand -->
+<div class="modal-overlay" id="brand-modal" style="display:none;">
+  <div class="modal">
+    <h3 id="brand-modal-title">브랜드 추가</h3>
+    <input type="hidden" id="brand-edit-idx" value="-1">
+    <div class="form-group">
+      <label>브랜드명</label>
+      <input type="text" id="brand-name" placeholder="브랜드명">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label>운영상태</label>
+        <select id="brand-status">
+          <option>활성</option>
+          <option>종료</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>채널</label>
+        <select id="brand-channel">
+          <option>온라인</option>
+          <option>오프라인전용</option>
+          <option>온+오프</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>카테고리</label>
+      <select id="brand-category">
+        <option>선글라스</option>
+        <option>안경</option>
+        <option>AI안경</option>
+        <option>렌즈</option>
+        <option>기타</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>메모</label>
+      <textarea id="brand-memo" rows="2" placeholder="담당자, 특이사항 등"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('brand-modal')">취소</button>
+      <button id="brand-delete-btn" class="btn" style="background:#fee2e2;color:#dc2626;display:none;" onclick="deleteBrand()">삭제</button>
+      <button class="btn btn-primary" onclick="saveBrand()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Settings -->
 <div class="modal-overlay" id="settings-modal" style="display:none;">
   <div class="modal">
@@ -719,6 +818,21 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
 // ============================================================
 // STATE
 // ============================================================
+// ============================================================
+// PERFORMANCE UTILS
+// ============================================================
+function debounce(fn, ms = 300) {
+  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+function rafRender(fn) {
+  requestAnimationFrame(fn);
+}
+let hotItemsTimer = null;
+function scheduleHotItems() {
+  clearTimeout(hotItemsTimer);
+  hotItemsTimer = setTimeout(() => rafRender(renderHotItems), 400);
+}
+
 let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymRMUtPu1PZpbaPBBVj_Ya9VgtREhfoQxcpepYfMotnUQRrDaMcGNYEaGIfAZWzjOC/exec';
 let invData = []; // parsed inventory rows
 let invFiltered = [];
@@ -884,6 +998,29 @@ function init() {
     }).catch(()=>{});
 
     loadCouponFromSheets().catch(()=>{});
+
+    // 브랜드 로드
+    loadSheetData('브랜드').then(d => {
+      if (!d || !Array.isArray(d) || d.length < 2) return;
+      const header = d[0].map(h => String(h));
+      const loaded = d.slice(1).map(row => {
+        const obj = {};
+        header.forEach((h,i) => obj[h] = row[i] !== undefined ? String(row[i]) : '');
+        return obj;
+      }).filter(r => r.name || r['브랜드명']);
+      if (!loaded.length) return;
+      brandData = loaded.map(r => ({
+        name: r.name || r['브랜드명'] || '',
+        status: r.status || r['운영상태'] || '활성',
+        channel: r.channel || r['채널'] || '온라인',
+        category: r.category || r['카테고리'] || '',
+        memo: r.memo || r['메모'] || '',
+      }));
+      showBrandUI();
+      renderBrandKPI();
+      filterBrands();
+      document.getElementById('brand-upload-zone').style.display = 'none';
+    }).catch(()=>{});
   }
 }
 
@@ -910,7 +1047,7 @@ async function saveSheetData(sheet, data) {
 // ============================================================
 // NAVIGATION
 // ============================================================
-const tabTitles = { inventory:'재고관리', products:'상품관리', calendar:'마케팅 캘린더', sales:'매출 대시보드', todos:'할 일 / 업무 메모', coupons:'쿠폰관리' };
+const tabTitles = { inventory:'재고관리', products:'상품관리', calendar:'마케팅 캘린더', sales:'매출 대시보드', coupons:'쿠폰관리', brands:'브랜드관리', todos:'할 일 / 업무 메모' };
 const TODO_PW = '0001'; // 비밀번호 변경 시 여기 수정
 let todoUnlocked = false;
 let pendingTab = null;
@@ -969,6 +1106,7 @@ function handleDrop(e, type) {
   if (type === 'inventory') processInvFile(file);
   else if (type === 'products') processProdFile(file);
   else if (type === 'coupons') processCouponFile(file);
+  else if (type === 'brands') processBrandFile(file);
   e.currentTarget.classList.remove('drag');
 }
 
@@ -1043,7 +1181,7 @@ function processInvFile(file) {
           status: parseStatus(row),
           warehouseQty: numCol(row, '창고재고'),
           storeQty: numCol(row, '매장재고'),
-          onlineQty: numCol(row, '자사몰연동'),
+          onlineQty: numCol(row, '전용재고> 공용') || numCol(row, '공용재고') || numCol(row, '공용'),
         };
       }).filter(Boolean);
 
@@ -1108,6 +1246,204 @@ function populateInvBrandFilter() {
 }
 
 // ============================================================
+// BRAND MANAGEMENT
+// ============================================================
+let brandData = [];
+let brandFiltered = [];
+let brandPage = 1;
+const BRAND_PER_PAGE = 50;
+let brandSortKey = 'name', brandSortDir = 1;
+
+function handleBrandFile(e) { processBrandFile(e.target.files[0]); }
+
+function processBrandFile(file) {
+  if (!file) return;
+  const readFile = (arrayBuffer) => {
+    try {
+      const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (rows.length < 2) { showToast('데이터가 없습니다.'); return; }
+      parseBrandRows(rows[0].map(String), rows.slice(1));
+    } catch(err) { showToast('파일 파싱 오류: ' + err.message); }
+  };
+  if (file.name.match(/\.csv$/i)) {
+    const r = new FileReader();
+    r.onload = e => {
+      try {
+        let text = e.target.result;
+        const rows = parseCSV(text);
+        if (rows.length < 2) { showToast('데이터가 없습니다.'); return; }
+        parseBrandRows(rows[0].map(String), rows.slice(1));
+      } catch(err) { showToast('CSV 파싱 오류: ' + err.message); }
+    };
+    r.readAsText(file, 'UTF-8');
+  } else {
+    const r = new FileReader();
+    r.onload = e => readFile(e.target.result);
+    r.readAsArrayBuffer(file);
+  }
+}
+
+function parseBrandRows(header, dataRows) {
+  const hi = {};
+  header.forEach((h,i) => { if(h) hi[h.trim()] = i; });
+  function col(row, ...names) {
+    for (const n of names) { const idx = hi[n]; if (idx !== undefined) return String(row[idx]||'').trim(); }
+    return '';
+  }
+  const loaded = dataRows.map(row => ({
+    name: col(row, '브랜드명', 'name', '브랜드'),
+    status: col(row, '운영상태', 'status') || '활성',
+    channel: col(row, '채널', 'channel') || '온라인',
+    category: col(row, '카테고리', 'category') || '',
+    memo: col(row, '메모', 'memo', '비고') || '',
+  })).filter(r => r.name);
+  if (!loaded.length) { showToast('브랜드 데이터를 찾을 수 없습니다. 헤더: 브랜드명, 운영상태, 채널, 카테고리, 메모'); return; }
+  brandData = loaded;
+  saveSheetData('브랜드', brandData).then(() => showToast(`✅ 브랜드 ${brandData.length}개 저장 완료`)).catch(()=>{});
+  showBrandUI();
+  renderBrandKPI();
+  filterBrands();
+  document.getElementById('brand-upload-zone').style.display = 'none';
+  showToast(`🏷️ 브랜드 ${brandData.length}개 로드 완료`);
+}
+
+function showBrandUI() {
+  document.getElementById('brand-toolbar').style.display = 'flex';
+  document.getElementById('brand-table-wrap').style.display = 'block';
+}
+
+function renderBrandKPI() {
+  const active = brandData.filter(b => b.status === '활성').length;
+  const ended = brandData.filter(b => b.status === '종료').length;
+  const offOnly = brandData.filter(b => b.channel === '오프라인전용').length;
+  const kpi = document.getElementById('brand-kpi');
+  kpi.style.display = 'grid';
+  kpi.innerHTML = `
+    <div class="kpi-card kpi-accent"><div class="kpi-label">전체 브랜드</div><div class="kpi-value">${brandData.length}</div></div>
+    <div class="kpi-card kpi-green"><div class="kpi-label">활성</div><div class="kpi-value">${active}</div></div>
+    <div class="kpi-card kpi-red"><div class="kpi-label">종료</div><div class="kpi-value">${ended}</div></div>
+    <div class="kpi-card" style="border-left:4px solid var(--gray)"><div class="kpi-label">오프라인전용</div><div class="kpi-value">${offOnly}</div></div>
+  `;
+}
+
+function filterBrands() {
+  const search = (document.getElementById('brand-search')?.value || '').toLowerCase();
+  const status = document.getElementById('brand-status-filter')?.value || '';
+  const channel = document.getElementById('brand-channel-filter')?.value || '';
+  const cat = document.getElementById('brand-cat-filter')?.value || '';
+  brandFiltered = brandData.filter(b => {
+    if (status && b.status !== status) return false;
+    if (channel && b.channel !== channel) return false;
+    if (cat && b.category !== cat) return false;
+    if (search && !b.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  brandFiltered.sort((a,b) => {
+    const av = a[brandSortKey]||'', bv = b[brandSortKey]||'';
+    return String(av).localeCompare(String(bv), 'ko') * brandSortDir;
+  });
+  brandPage = 1;
+  document.getElementById('brand-count').textContent = `총 ${brandFiltered.length}개`;
+  renderBrandTable();
+}
+
+function sortBrands(key) {
+  if (brandSortKey === key) brandSortDir *= -1; else { brandSortKey = key; brandSortDir = 1; }
+  ['name','status','channel','category'].forEach(k => {
+    const el = document.getElementById('bsort-'+k);
+    if (el) el.textContent = k === brandSortKey ? (brandSortDir === 1 ? '↑' : '↓') : '↕';
+  });
+  filterBrands();
+}
+
+function renderBrandTable() {
+  const start = (brandPage-1)*BRAND_PER_PAGE;
+  const page = brandFiltered.slice(start, start+BRAND_PER_PAGE);
+  const tbody = document.getElementById('brand-tbody');
+  tbody.innerHTML = page.map((b, i) => {
+    const gi = brandData.indexOf(b);
+    const stBadge = b.status === '활성' ? 'badge-green' : 'badge-red';
+    const chBadge = b.channel === '오프라인전용' ? 'badge-gray' : b.channel === '온+오프' ? 'badge-blue' : 'badge-active';
+    return `<tr>
+      <td style="font-weight:600;">${b.name}</td>
+      <td><span class="badge ${stBadge}">${b.status}</span></td>
+      <td><span class="badge ${chBadge}">${b.channel}</span></td>
+      <td>${b.category || '-'}</td>
+      <td style="font-size:12px;color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;">${b.memo || '-'}</td>
+      <td><button class="btn btn-secondary btn-sm" onclick="editBrand(${gi})">수정</button></td>
+    </tr>`;
+  }).join('');
+  renderPagination('brand', brandFiltered.length, BRAND_PER_PAGE, brandPage);
+}
+
+function openBrandModal() {
+  document.getElementById('brand-modal-title').textContent = '브랜드 추가';
+  document.getElementById('brand-edit-idx').value = '-1';
+  document.getElementById('brand-name').value = '';
+  document.getElementById('brand-status').value = '활성';
+  document.getElementById('brand-channel').value = '온라인';
+  document.getElementById('brand-category').value = '선글라스';
+  document.getElementById('brand-memo').value = '';
+  document.getElementById('brand-delete-btn').style.display = 'none';
+  document.getElementById('brand-modal').style.display = 'flex';
+}
+
+function editBrand(idx) {
+  const b = brandData[idx];
+  document.getElementById('brand-modal-title').textContent = '브랜드 수정';
+  document.getElementById('brand-edit-idx').value = idx;
+  document.getElementById('brand-name').value = b.name;
+  document.getElementById('brand-status').value = b.status;
+  document.getElementById('brand-channel').value = b.channel;
+  document.getElementById('brand-category').value = b.category || '선글라스';
+  document.getElementById('brand-memo').value = b.memo || '';
+  document.getElementById('brand-delete-btn').style.display = 'inline-flex';
+  document.getElementById('brand-modal').style.display = 'flex';
+}
+
+function saveBrand() {
+  const name = document.getElementById('brand-name').value.trim();
+  if (!name) { showToast('브랜드명을 입력하세요.'); return; }
+  const b = {
+    name,
+    status: document.getElementById('brand-status').value,
+    channel: document.getElementById('brand-channel').value,
+    category: document.getElementById('brand-category').value,
+    memo: document.getElementById('brand-memo').value.trim(),
+  };
+  const idx = parseInt(document.getElementById('brand-edit-idx').value);
+  if (idx >= 0) brandData[idx] = b; else brandData.push(b);
+  saveSheetData('브랜드', brandData).catch(()=>{});
+  closeModal('brand-modal');
+  showBrandUI();
+  renderBrandKPI();
+  filterBrands();
+  showToast(idx >= 0 ? '브랜드가 수정되었습니다.' : '브랜드가 추가되었습니다.');
+}
+
+function deleteBrand() {
+  const idx = parseInt(document.getElementById('brand-edit-idx').value);
+  if (idx < 0) return;
+  brandData.splice(idx, 1);
+  saveSheetData('브랜드', brandData).catch(()=>{});
+  closeModal('brand-modal');
+  renderBrandKPI();
+  filterBrands();
+  showToast('브랜드가 삭제되었습니다.');
+}
+
+function reuploadBrand() {
+  brandData = []; brandFiltered = [];
+  document.getElementById('brand-upload-zone').style.display = 'block';
+  document.getElementById('brand-toolbar').style.display = 'none';
+  document.getElementById('brand-table-wrap').style.display = 'none';
+  document.getElementById('brand-kpi').style.display = 'none';
+  document.getElementById('brand-file').value = '';
+}
+
+// ============================================================
 // REUPLOAD
 // ============================================================
 function reuploadInv() {
@@ -1142,6 +1478,18 @@ function renderHotItems() {
   const STOCK_WARN = 3;
   const hasInv = invData.length > 0;
 
+  // 제외 브랜드 목록 (종료 or 오프라인전용)
+  const excludedBrands = new Set(
+    brandData.filter(b => b.status === '종료' || b.channel === '오프라인전용').map(b => b.name.toLowerCase())
+  );
+  function isExcluded(prod) {
+    const cat = String(prod.category||'').toLowerCase();
+    const name = String(prod.refName||prod.name||'').toLowerCase();
+    if (cat.includes('렌즈') || name.includes('렌즈')) return true;
+    if (excludedBrands.has(String(prod.brand||'').toLowerCase())) return true;
+    return false;
+  }
+
   function normalize(s) { return String(s||'').toLowerCase().replace(/[\s\-_\[\]()]/g,''); }
   function findInv(prod) {
     if (!hasInv) return null;
@@ -1158,7 +1506,7 @@ function renderHotItems() {
     return r || null;
   }
 
-  const top20 = [...prodData].sort((a,b) => b.sales - a.sales).slice(0, HOT_LIMIT);
+  const top20 = [...prodData].filter(p => !isExcluded(p)).sort((a,b) => b.sales - a.sales).slice(0, HOT_LIMIT);
   const maxSales = top20[0]?.sales || 1;
 
   // 🔴 잘 팔리는데 품절
@@ -1171,7 +1519,7 @@ function renderHotItems() {
 
   // 🟡 조회수 높은데 전환율 낮음 (상품 데이터만 있어도 표시)
   const highViewLow = [...prodData]
-    .filter(p => p.views >= 100 && p.views > 0)
+    .filter(p => !isExcluded(p) && p.views >= 100 && p.views > 0)
     .map(p => ({p, inv: findInv(p), rate: p.sales / p.views}))
     .filter(({rate}) => rate < 0.02)
     .sort((a,b) => b.p.views - a.p.views)
@@ -1225,7 +1573,7 @@ function renderHotItems() {
         <span class="hot-hint">창고재고 기준</span>
       </div>
       <div class="table-wrap" style="border:none;border-radius:0;">
-      <table><thead><tr><th>SKU</th><th>상품명</th><th>브랜드</th><th>판매수</th><th>재고상태</th><th>창고재고</th><th>자사몰연동</th><th>위험도</th></tr></thead><tbody>
+      <table><thead><tr><th>SKU</th><th>상품명</th><th>브랜드</th><th>판매수</th><th>재고상태</th><th>창고재고</th><th>공용재고</th><th>위험도</th></tr></thead><tbody>
       ${lowStock.map(({p,inv}) => {
         const risk = inv.warehouseQty === 0 ? `<span class="risk-high">🔥 매우높음</span>` : inv.warehouseQty <= 1 ? `<span class="risk-high">⚠️ 높음</span>` : `<span class="risk-mid">⚠️ 주의</span>`;
         return `<tr>
