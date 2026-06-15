@@ -1163,8 +1163,8 @@ function processInvFile(file) {
         const idx = raw.indexOf(':');
         const name = idx >= 0 ? raw.slice(idx + 1).trim() : raw.trim();
         if (name.includes('선글라스')) return '선글라스';
+        if (name.toUpperCase().includes('AI')) return 'AI안경';
         if (name.includes('안경테') || name.includes('안경')) return '안경';
-        if (name === 'AI') return 'AI안경';
         return name;
       }
       function parseStatus(row) {
@@ -1575,14 +1575,31 @@ function renderHotItems() {
 
   // 🔴 섹션
   if (soldOut.length) {
+    const sorted = applyHotSort(soldOut, 'soldOut', {
+      rank:         x => x.rank,
+      sku:          x => x.inv.sku,
+      name:         x => x.p ? (x.p.refName||x.p.name) : x.inv.name,
+      brand:        x => x.p ? x.p.brand : (x.inv.brand||''),
+      sales:        x => x.p?.sales || 0,
+      warehouseQty: x => x.inv.warehouseQty ?? 0,
+    });
     html += `<div class="hot-section">
       <div class="hot-section-hd">
         <div class="hot-section-title">🔴 강제품절 상품 <span class="hot-cnt red">${soldOut.length}</span></div>
         <span class="hot-hint">재고 강제품절 전체 · 판매수 높은 순</span>
       </div>
       <div class="table-wrap" style="border:none;border-radius:0;">
-      <table><thead><tr><th>순위</th><th>스타일</th><th>참고상품명</th><th>브랜드</th><th>판매수</th><th>판매 비중</th><th>재고상태</th><th>창고재고</th></tr></thead><tbody>
-      ${soldOut.map(({p,inv,rank}) => {
+      <table><thead><tr>
+        ${hotTh('soldOut','rank','순위')}
+        ${hotTh('soldOut','sku','스타일')}
+        ${hotTh('soldOut','name','참고상품명')}
+        ${hotTh('soldOut','brand','브랜드')}
+        ${hotTh('soldOut','sales','판매수')}
+        <th>판매 비중</th>
+        <th>재고상태</th>
+        ${hotTh('soldOut','warehouseQty','창고재고')}
+      </tr></thead><tbody>
+      ${sorted.map(({p,inv,rank}) => {
         const sales = p?.sales || 0;
         const pct = maxSales > 0 ? Math.round(sales / maxSales * 100) : 0;
         const color = pct > 60 ? '#ef4444' : pct > 30 ? '#f97316' : '#eab308';
@@ -1602,14 +1619,31 @@ function renderHotItems() {
 
   // 🟠 섹션
   if (lowStock.length) {
+    const sorted = applyHotSort(lowStock, 'lowStock', {
+      sku:          x => x.inv.sku,
+      name:         x => x.p ? (x.p.refName||x.p.name) : x.inv.name,
+      brand:        x => x.p ? x.p.brand : (x.inv.brand||''),
+      sales:        x => x.p?.sales || 0,
+      warehouseQty: x => Number(x.inv.warehouseQty) || 0,
+      onlineQty:    x => x.inv.onlineQty ?? 0,
+    });
     html += `<div class="hot-section">
       <div class="hot-section-hd">
         <div class="hot-section-title">🟠 잘 팔리는데 재고 ${STOCK_WARN}개 이하 <span class="hot-cnt orange">${lowStock.length}</span></div>
         <span class="hot-hint">창고재고 기준</span>
       </div>
       <div class="table-wrap" style="border:none;border-radius:0;">
-      <table><thead><tr><th>스타일</th><th>참고상품명</th><th>브랜드</th><th>판매수</th><th>재고상태</th><th>창고재고</th><th>공용재고</th><th>위험도</th></tr></thead><tbody>
-      ${lowStock.map(({p,inv}) => {
+      <table><thead><tr>
+        ${hotTh('lowStock','sku','스타일')}
+        ${hotTh('lowStock','name','참고상품명')}
+        ${hotTh('lowStock','brand','브랜드')}
+        ${hotTh('lowStock','sales','판매수')}
+        <th>재고상태</th>
+        ${hotTh('lowStock','warehouseQty','창고재고')}
+        ${hotTh('lowStock','onlineQty','공용재고')}
+        <th>위험도</th>
+      </tr></thead><tbody>
+      ${sorted.map(({p,inv}) => {
         const qty = Number(inv.warehouseQty)||0;
         const risk = qty === 0 ? `<span class="risk-high">🔥 매우높음</span>` : qty <= 1 ? `<span class="risk-high">⚠️ 높음</span>` : `<span class="risk-mid">⚠️ 주의</span>`;
         return `<tr>
@@ -1628,14 +1662,31 @@ function renderHotItems() {
 
   // 🟡 섹션
   if (highViewLow.length) {
+    const sorted = applyHotSort(highViewLow, 'highViewLow', {
+      sku:   x => x.inv ? x.inv.sku : x.p.code,
+      name:  x => x.p.refName || x.p.name,
+      brand: x => x.p.brand,
+      views: x => x.p.views,
+      sales: x => x.p.sales,
+      rate:  x => x.rate,
+    });
     html += `<div class="hot-section">
       <div class="hot-section-hd">
         <div class="hot-section-title">🟡 조회수 높은데 판매 안됨 <span class="hot-cnt yellow">${highViewLow.length}</span></div>
         <span class="hot-hint">전환율 2% 미만 · 조회수 300+ 기준</span>
       </div>
       <div class="table-wrap" style="border:none;border-radius:0;">
-      <table><thead><tr><th>스타일/상품코드</th><th>참고상품명</th><th>브랜드</th><th>조회수</th><th>판매수</th><th>전환율</th><th>재고상태</th><th>의심 원인</th></tr></thead><tbody>
-      ${highViewLow.map(({p,inv,rate}) => {
+      <table><thead><tr>
+        ${hotTh('highViewLow','sku','스타일/상품코드')}
+        ${hotTh('highViewLow','name','참고상품명')}
+        ${hotTh('highViewLow','brand','브랜드')}
+        ${hotTh('highViewLow','views','조회수')}
+        ${hotTh('highViewLow','sales','판매수')}
+        ${hotTh('highViewLow','rate','전환율')}
+        <th>재고상태</th>
+        <th>의심 원인</th>
+      </tr></thead><tbody>
+      ${sorted.map(({p,inv,rate}) => {
         const reason = inv && inv.status === '강제품절' ? '품절로 인한 이탈' : inv && inv.warehouseQty <= STOCK_WARN ? '재고 부족' : '가격/상세페이지 확인 필요';
         return `<tr>
           <td style="font-family:monospace;font-size:12px;">${inv ? inv.sku : p.code}</td>
@@ -1659,6 +1710,31 @@ function renderHotItems() {
 // SORT
 // ============================================================
 const sortState = { inv: { key: '', dir: 1 }, prod: { key: '', dir: 1 } };
+const hotSortState = {
+  soldOut:     { key: '', dir: 1 },
+  lowStock:    { key: '', dir: 1 },
+  highViewLow: { key: '', dir: 1 },
+};
+function sortHot(section, key) {
+  const s = hotSortState[section];
+  if (s.key === key) { s.dir *= -1; } else { s.key = key; s.dir = 1; }
+  scheduleHotItems();
+}
+function applyHotSort(arr, section, getters) {
+  const { key, dir } = hotSortState[section];
+  if (!key || !getters[key]) return arr;
+  return [...arr].sort((a, b) => {
+    const av = getters[key](a) ?? ''; const bv = getters[key](b) ?? '';
+    return typeof av === 'number' ? (av - bv) * dir : String(av).localeCompare(String(bv), 'ko') * dir;
+  });
+}
+function hotSortIcon(section, key) {
+  const s = hotSortState[section];
+  return s.key === key ? (s.dir === 1 ? ' ↑' : ' ↓') : ' ↕';
+}
+function hotTh(section, key, label, style='') {
+  return `<th style="cursor:pointer;user-select:none;${style}" onclick="sortHot('${section}','${key}')">${label}<span style="opacity:.5;font-size:10px;">${hotSortIcon(section,key)}</span></th>`;
+}
 
 function sortTable(type, key) {
   const s = sortState[type];
