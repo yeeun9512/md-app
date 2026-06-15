@@ -497,6 +497,7 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
           <option value="종료">종료 브랜드만</option>
         </select>
         <button class="btn btn-primary btn-sm" onclick="openAddBrandModal()">+ 브랜드 추가</button>
+        <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;" onclick="resetCouponData()">🗑️ 초기화</button>
         <span class="page-info" id="coupon-count"></span>
       </div>
 
@@ -1301,7 +1302,7 @@ function parseBrandRows(header, dataRows) {
   }
   const loaded = dataRows.map(row => ({
     name: col(row, '브랜드명', 'name', '브랜드'),
-    status: col(row, '운영상태', 'status') || '활성',
+    status: (s => s === '유지' ? '활성' : s === '제외' ? '종료' : s || '활성')(col(row, '운영상태', 'status')),
     channel: col(row, '채널', 'channel') || '온라인',
     category: col(row, '카테고리', 'category') || '',
     memo: col(row, '메모', 'memo', '비고') || '',
@@ -2839,6 +2840,24 @@ function openAddBrandModal() {
   renderCouponTable();
   saveCouponToSheets();
   showToast('브랜드 추가 완료: '+name.trim());
+}
+
+function resetCouponData() {
+  if (!confirm('쿠폰 데이터를 초기화하시겠습니까?')) return;
+  couponData = [];
+  couponPage = 1;
+  document.getElementById('coupon-upload-zone').style.display = '';
+  document.getElementById('coupon-kpi').style.display = 'none';
+  document.getElementById('coupon-toolbar').style.display = 'none';
+  document.getElementById('coupon-table-wrap').style.display = 'none';
+  if (SCRIPT_URL) {
+    fetch(SCRIPT_URL, {
+      method:'POST',
+      body: JSON.stringify({action:'saveData', sheet:'쿠폰', data:[]}),
+      headers:{'Content-Type':'text/plain'}
+    }).catch(()=>{});
+  }
+  showToast('쿠폰 데이터 초기화 완료');
 }
 
 function saveCouponToSheets() {
