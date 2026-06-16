@@ -1306,29 +1306,15 @@ function parseBrandRows(header, dataRows) {
   }
   // 헤더가 없거나 인식 안 될 경우 위치 기반 폴백
   // 이 CSV 구조: [순서, 영문명, 한글브랜드명, 수수료, 수수료율, 채널, 비고]
-  const hasNameCol = Object.keys(hi).some(k => ['브랜드명','name','브랜드','한글명','한글 브랜드명'].includes(k));
   const loaded = dataRows.map(row => {
-    let name, nameEn, channel, statusRaw, memo;
-    if (hasNameCol) {
-      name      = col(row, '브랜드명', 'name', '브랜드', '한글명', '한글 브랜드명');
-      nameEn    = col(row, '영문 브랜드명', '영문명', 'nameEn', 'english');
-      statusRaw = col(row, '운영상태', 'status', '비고');
-      channel   = col(row, '채널', 'channel', '자사몰/오프라인전용');
-      memo      = col(row, '메모', 'memo', '비고', '수수료');
-    } else {
-      // 위치 기반: col1=영문명, col2=한글명, col5=채널, col3=수수료유형
-      nameEn    = String(row[1] || '').trim();
-      name      = String(row[2] || '').trim();
-      statusRaw = String(row[6] || '').trim();
-      channel   = String(row[5] || '').trim();
-      memo      = String(row[3] || '').trim();
-    }
-    // col0에 "코드:브랜드명" 형식이면 브랜드명 추출
-    if (!name) {
-      const raw = String(row[0] || '').trim();
-      name = raw.includes(':') ? raw.split(':')[1].trim() : raw;
-    }
-    const status = statusRaw === '유지' ? '활성' : statusRaw === '제외' ? '종료' : '활성';
+    // 헤더 기반 매핑 (브랜드관리.xlsx 기준)
+    const nameEn    = col(row, '브랜드 영문명', '영문 브랜드명', '영문명', 'nameEn');
+    const name      = col(row, '브랜드 국문명', '브랜드명', '한글명', '브랜드', 'name') ||
+                      (() => { const raw = String(row[0]||'').trim(); return raw.includes(':') ? raw.split(':')[1].trim() : ''; })();
+    const channel   = col(row, '온/오프라인', '채널', 'channel', '자사몰/오프라인전용') || String(row[4]||'').trim();
+    const statusRaw = col(row, '운영상태', 'status') || String(row[5]||'').trim();
+    const memo      = col(row, '구분', '메모', 'memo', '비고', '수수료');
+    const status    = statusRaw === '종료' ? '종료' : statusRaw === '제외' ? '종료' : '활성';
     return { name, nameEn: nameEn || '', status, channel: channel || 'ALL', category: '', memo };
   }).filter(r => r.name);
   if (!loaded.length) { showToast('브랜드 데이터를 찾을 수 없습니다. 헤더: 브랜드명, 운영상태, 채널, 카테고리, 메모'); return; }
@@ -1512,7 +1498,13 @@ function renderHotItems() {
 
   // 제외 브랜드 목록 (종료 or 오프라인전용)
   const excludedBrands = new Set(
-    brandData.filter(b => b.status === '종료' || b.channel === '오프라인전용' || b.channel === '버추얼피팅전용' || b.channel === 'ONLY OFF' || b.channel === 'ONLY VF').map(b => b.name.toLowerCase())
+    brandData.filter(b => {
+      if (b.status === '종료') return true;
+      const ch = (b.channel || '').toUpperCase();
+      if (ch === 'ONLY VF' || ch === '오프라인전용' || ch === '버추얼피팅전용' || ch === 'ONLY OFF') return true;
+      if (ch === '오프라인' || ch === '-') return true;
+      return false;
+    }).map(b => b.name.toLowerCase())
   );
   function isExcluded(prod) {
     const cat = String(prod.category||'').toLowerCase();
