@@ -1279,27 +1279,17 @@ function processBrandFile(file) {
     const r = new FileReader();
     r.onload = e => {
       try {
-        let text = e.target.result;
-        // EUC-KR 폴백: 헤더에 한글이 없으면 재시도
-        const hasKorean = /[가-힣]/.test(text.slice(0, 200));
-        if (!hasKorean) {
-          const r2 = new FileReader();
-          r2.onload = e2 => {
-            try {
-              const rows = parseCSV(e2.target.result);
-              if (rows.length < 2) { showToast('데이터가 없습니다.'); return; }
-              parseBrandRows(rows[0].map(String), rows.slice(1));
-            } catch(err) { showToast('CSV 파싱 오류: ' + err.message); }
-          };
-          r2.readAsText(file, 'EUC-KR');
-          return;
+        const buf = e.target.result;
+        let text = new TextDecoder('utf-8').decode(buf);
+        if (!/[가-힣]/.test(text.slice(0, 500))) {
+          text = new TextDecoder('euc-kr').decode(buf);
         }
         const rows = parseCSV(text);
         if (rows.length < 2) { showToast('데이터가 없습니다.'); return; }
         parseBrandRows(rows[0].map(String), rows.slice(1));
       } catch(err) { showToast('CSV 파싱 오류: ' + err.message); }
     };
-    r.readAsText(file, 'UTF-8');
+    r.readAsArrayBuffer(file);
   } else {
     const r = new FileReader();
     r.onload = e => readFile(e.target.result);
@@ -2774,8 +2764,10 @@ function getFilteredCouponData() {
   const typeIdx = typeFilter ? COUPON_TYPES.indexOf(typeFilter) : -1;
   return couponData.filter(d => {
     if (q && !d.brand.toLowerCase().includes(q)) return false;
-    if (brandFilter === '활성' && !d.active) return false;
-    if (brandFilter === '종료' && d.active) return false;
+    const bi = brandData.find(b => b.name === d.brand);
+    const isActive = bi ? bi.status !== '종료' : d.active !== false;
+    if (brandFilter === '활성' && !isActive) return false;
+    if (brandFilter === '종료' && isActive) return false;
     if (statusFilter && typeIdx >= 0) {
       if (d.statuses[typeIdx] !== statusFilter) return false;
     } else if (statusFilter) {
@@ -2807,7 +2799,8 @@ function renderCouponTable() {
   // find real index in couponData for each filtered row
   document.getElementById('coupon-tbody').innerHTML = page.map(d => {
     const realIdx = couponData.indexOf(d);
-    const isActive = d.active !== false;
+    const brandInfo = brandData.find(b => b.name === d.brand);
+    const isActive = brandInfo ? brandInfo.status !== '종료' : d.active !== false;
     const rowStyle = isActive ? '' : 'opacity:0.5;background:#fafafa;';
     return `<tr style="${rowStyle}">
       <td><strong>${d.brand}</strong></td>
