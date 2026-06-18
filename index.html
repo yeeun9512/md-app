@@ -548,7 +548,7 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
               <th onclick="sortBrands('name')" style="cursor:pointer;">브랜드명 <span id="bsort-name">↕</span></th>
               <th onclick="sortBrands('status')" style="cursor:pointer;">운영상태 <span id="bsort-status">↕</span></th>
               <th onclick="sortBrands('channel')" style="cursor:pointer;">채널 <span id="bsort-channel">↕</span></th>
-              <th onclick="sortBrands('category')" style="cursor:pointer;">카테고리 <span id="bsort-category">↕</span></th>
+              <th onclick="sortBrands('memo')" style="cursor:pointer;">구분 <span id="bsort-memo">↕</span></th>
               <th>메모</th>
               <th>관리</th>
             </tr>
@@ -1306,16 +1306,35 @@ function parseBrandRows(header, dataRows) {
   }
   // 헤더가 없거나 인식 안 될 경우 위치 기반 폴백
   // 이 CSV 구조: [순서, 영문명, 한글브랜드명, 수수료, 수수료율, 채널, 비고]
+  // 알려진 헤더명 → 필드 매핑
+  const NAME_EN_COLS  = ['브랜드 영문명', '영문 브랜드명', '영문명', 'nameEn'];
+  const NAME_KO_COLS  = ['브랜드 국문명', '브랜드명', '한글명', '브랜드', 'name'];
+  const CHANNEL_COLS  = ['온/오프라인', '채널', 'channel', '자사몰/오프라인전용'];
+  const STATUS_COLS   = ['진행여부', '운영상태', 'status'];
+  const MEMO_COLS     = ['구분', '메모', 'memo', '비고'];
+
+  // 각 필드의 실제 컬럼 인덱스 결정 (헤더 기반 우선, 없으면 위치 기반)
+  const idxOf = (keys, fallback) => {
+    for (const k of keys) { if (hi[k] !== undefined) return hi[k]; }
+    return fallback;
+  };
+  const iNameEn  = idxOf(NAME_EN_COLS,  0);
+  const iNameKo  = idxOf(NAME_KO_COLS,  1);
+  const iChannel = idxOf(CHANNEL_COLS,  4);
+  const iStatus  = idxOf(STATUS_COLS,   5);
+  const iMemo    = idxOf(MEMO_COLS,     2);
+
+  console.log('[브랜드 파싱] 컬럼 인덱스:', {iNameEn, iNameKo, iChannel, iStatus, iMemo});
+  console.log('[브랜드 파싱] 첫 행:', dataRows[0]);
+
   const loaded = dataRows.map(row => {
-    // 헤더 기반 매핑 (브랜드관리.xlsx 기준)
-    const nameEn    = col(row, '브랜드 영문명', '영문 브랜드명', '영문명', 'nameEn');
-    const name      = col(row, '브랜드 국문명', '브랜드명', '한글명', '브랜드', 'name') ||
-                      (() => { const raw = String(row[0]||'').trim(); return raw.includes(':') ? raw.split(':')[1].trim() : ''; })();
-    const channel   = col(row, '온/오프라인', '채널', 'channel', '자사몰/오프라인전용') || String(row[4]||'').trim();
-    const statusRaw = col(row, '운영상태', 'status') || String(row[5]||'').trim();
-    const memo      = col(row, '구분', '메모', 'memo', '비고', '수수료');
-    const status    = statusRaw === '종료' ? '종료' : statusRaw === '제외' ? '종료' : '활성';
-    return { name, nameEn: nameEn || '', status, channel: channel || 'ALL', category: '', memo };
+    const nameEn   = String(row[iNameEn]  || '').trim();
+    const name     = String(row[iNameKo]  || '').trim();
+    const channel  = String(row[iChannel] || '').trim();
+    const statusRaw= String(row[iStatus]  || '').trim();
+    const memo     = String(row[iMemo]    || '').trim();
+    const status   = statusRaw === '종료' || statusRaw === '제외' ? '종료' : '활성';
+    return { name, nameEn, status, channel: channel || '-', category: '', memo };
   }).filter(r => r.name);
   if (!loaded.length) { showToast('브랜드 데이터를 찾을 수 없습니다. 헤더: 브랜드명, 운영상태, 채널, 카테고리, 메모'); return; }
   brandData = loaded;
@@ -1383,13 +1402,15 @@ function renderBrandTable() {
   tbody.innerHTML = page.map((b, i) => {
     const gi = brandData.indexOf(b);
     const stBadge = b.status === '활성' ? 'badge-green' : 'badge-red';
-    const chBadge = b.channel === '오프라인전용' ? 'badge-gray' : b.channel === '온+오프' ? 'badge-blue' : 'badge-active';
+    const ch = (b.channel||'').toUpperCase();
+    const chBadge = (ch==='오프라인'||ch==='오프라인전용'||ch==='-') ? 'badge-gray' : ch==='온+오프' ? 'badge-blue' : ch==='ONLY VF' ? 'badge-orange' : 'badge-active';
+    const memoBadge = b.memo ? `<span class="badge" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;">${b.memo}</span>` : '-';
     return `<tr>
-      <td style="font-weight:600;">${b.name}</td>
+      <td style="font-weight:600;">${b.name}${b.nameEn ? `<div style="font-size:11px;color:var(--text-secondary);font-weight:400;">${b.nameEn}</div>` : ''}</td>
       <td><span class="badge ${stBadge}">${b.status}</span></td>
       <td><span class="badge ${chBadge}">${b.channel}</span></td>
-      <td>${b.category || '-'}</td>
-      <td style="font-size:12px;color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;">${b.memo || '-'}</td>
+      <td>${memoBadge}</td>
+      <td style="font-size:12px;color:var(--text-secondary);">-</td>
       <td><button class="btn btn-secondary btn-sm" onclick="editBrand(${gi})">수정</button></td>
     </tr>`;
   }).join('');
@@ -2348,12 +2369,71 @@ function renderSalesKPI() {
   const monthTotal = validData.filter(r => (r.date||'').startsWith(thisMonthKey)).reduce((s, r) => s + (r.price||0), 0);
   const avgOrder   = validData.length ? Math.round(total / validData.length) : 0;
 
+  // 브랜드 구분 매핑 (brandData.memo 기준)
+  const brandTypeMap = {};
+  brandData.forEach(b => {
+    const memo = (b.memo || '').toLowerCase();
+    const type = memo.includes('pb') ? 'PB'
+      : memo.includes('위탁') ? '위탁'
+      : memo.includes('사입') ? '사입'
+      : '기타';
+    brandTypeMap[b.name.toLowerCase()] = type;
+    if (b.nameEn) brandTypeMap[b.nameEn.toLowerCase()] = type;
+  });
+  const getBrandType = r => brandTypeMap[(r.brand||'').toLowerCase()] || '기타';
+
+  const typeGroups = { 'PB': 0, '위탁': 0, '사입': 0, '기타': 0 };
+  validData.forEach(r => { typeGroups[getBrandType(r)] = (typeGroups[getBrandType(r)] || 0) + (r.price || 0); });
+
+  // 카테고리 구분
+  const catGroups = { '선글라스': 0, '안경': 0, 'AI안경': 0, '기타': 0 };
+  validData.forEach(r => {
+    const cat = r.category || '';
+    if (cat === '선글라스') catGroups['선글라스'] += r.price || 0;
+    else if (cat === '안경' || cat === '안경테') catGroups['안경'] += r.price || 0;
+    else if (cat === 'AI안경') catGroups['AI안경'] += r.price || 0;
+    else catGroups['기타'] += r.price || 0;
+  });
+
+  const pct = (v) => total > 0 ? (v/total*100).toFixed(1) : '0.0';
+  const wan = (v) => `${(v/10000).toFixed(0)}만`;
+
+  const typeColors = { 'PB': '#6366f1', '위탁': '#10b981', '사입': '#f97316', '기타': '#94a3b8' };
+  const catColors  = { '선글라스': '#f59e0b', '안경': '#3b82f6', 'AI안경': '#8b5cf6', '기타': '#94a3b8' };
+
+  const typeBar = Object.entries(typeGroups).filter(([,v])=>v>0).map(([k,v])=>
+    `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+      <span style="width:44px;font-size:11px;font-weight:600;color:${typeColors[k]}">${k}</span>
+      <div style="flex:1;background:#f1f5f9;border-radius:4px;height:8px;overflow:hidden;">
+        <div style="width:${pct(v)}%;height:100%;background:${typeColors[k]};border-radius:4px;"></div>
+      </div>
+      <span style="font-size:11px;color:var(--text-secondary);width:60px;text-align:right;">${wan(v)} (${pct(v)}%)</span>
+    </div>`).join('');
+
+  const catBar = Object.entries(catGroups).filter(([,v])=>v>0).map(([k,v])=>
+    `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+      <span style="width:44px;font-size:11px;font-weight:600;color:${catColors[k]||'#94a3b8'}">${k}</span>
+      <div style="flex:1;background:#f1f5f9;border-radius:4px;height:8px;overflow:hidden;">
+        <div style="width:${pct(v)}%;height:100%;background:${catColors[k]||'#94a3b8'};border-radius:4px;"></div>
+      </div>
+      <span style="font-size:11px;color:var(--text-secondary);width:60px;text-align:right;">${wan(v)} (${pct(v)}%)</span>
+    </div>`).join('');
+
   document.getElementById('sales-kpi').innerHTML = `
     <div class="kpi-card kpi-accent"><div class="kpi-label">총 매출</div><div class="kpi-value">${(total/10000).toFixed(0)}만</div><div class="kpi-sub">${total.toLocaleString()}원</div></div>
     <div class="kpi-card kpi-green"><div class="kpi-label">이번달 매출</div><div class="kpi-value">${(monthTotal/10000).toFixed(0)}만</div><div class="kpi-sub">${now.getMonth()+1}월</div></div>
     <div class="kpi-card"><div class="kpi-label">총 주문건수</div><div class="kpi-value">${validData.length.toLocaleString()}</div><div class="kpi-sub">취소 제외</div></div>
     <div class="kpi-card kpi-red"><div class="kpi-label">총 할인액</div><div class="kpi-value">${(totalDiscount/10000).toFixed(0)}만</div><div class="kpi-sub">${totalDiscount.toLocaleString()}원</div></div>
     <div class="kpi-card"><div class="kpi-label">평균 주문금액</div><div class="kpi-value">${(avgOrder/1000).toFixed(0)}천</div><div class="kpi-sub">${avgOrder.toLocaleString()}원</div></div>
+    ${brandData.length ? `
+    <div class="kpi-card" style="grid-column:span 2;min-width:0;">
+      <div class="kpi-label" style="margin-bottom:8px;">📦 브랜드 유형별 매출</div>
+      ${typeBar || '<span style="font-size:12px;color:var(--text-secondary)">데이터 없음</span>'}
+    </div>
+    <div class="kpi-card" style="grid-column:span 2;min-width:0;">
+      <div class="kpi-label" style="margin-bottom:8px;">👓 카테고리별 매출</div>
+      ${catBar || '<span style="font-size:12px;color:var(--text-secondary)">데이터 없음</span>'}
+    </div>` : ''}
   `;
 }
 
