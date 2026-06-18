@@ -1355,7 +1355,9 @@ function showBrandUI() {
 function renderBrandKPI() {
   const active = brandData.filter(b => b.status === '활성').length;
   const ended = brandData.filter(b => b.status === '종료').length;
-  const offOnly = brandData.filter(b => b.channel === '오프라인전용').length;
+  const isOffline = b => { const ch = (b.channel||'').toLowerCase(); return ch.includes('오프라인') || ch === 'only off' || ch === '-'; };
+  const offOnly = brandData.filter(isOffline).length;
+  const onlyVF  = brandData.filter(b => (b.channel||'').toUpperCase() === 'ONLY VF').length;
   const kpi = document.getElementById('brand-kpi');
   kpi.style.display = 'grid';
   kpi.innerHTML = `
@@ -1363,6 +1365,7 @@ function renderBrandKPI() {
     <div class="kpi-card kpi-green"><div class="kpi-label">활성</div><div class="kpi-value">${active}</div></div>
     <div class="kpi-card kpi-red"><div class="kpi-label">종료</div><div class="kpi-value">${ended}</div></div>
     <div class="kpi-card" style="border-left:4px solid var(--gray)"><div class="kpi-label">오프라인전용</div><div class="kpi-value">${offOnly}</div></div>
+    <div class="kpi-card" style="border-left:4px solid #f59e0b"><div class="kpi-label">ONLY VF</div><div class="kpi-value">${onlyVF}</div></div>
   `;
 }
 
@@ -2814,11 +2817,16 @@ function showCouponUI() {
   document.getElementById('coupon-table-wrap').style.display='';
 }
 
+function isCouponBrandActive(d) {
+  const bi = brandData.find(b => b.name === d.brand || (b.nameEn && b.nameEn.toUpperCase() === d.brand.toUpperCase()));
+  return bi ? bi.status !== '종료' : d.active !== false;
+}
+
 function renderCouponKPI() {
   const kpiEl = document.getElementById('coupon-kpi');
-  const activeBrands = couponData.filter(d=>d.active);
+  const activeBrands = couponData.filter(d => isCouponBrandActive(d));
   const counts = COUPON_TYPES.map((t,i) => activeBrands.filter(d=>d.statuses[i]==='진행').length);
-  const terminatedCount = couponData.filter(d=>!d.active).length;
+  const terminatedCount = couponData.filter(d => !isCouponBrandActive(d)).length;
   kpiEl.innerHTML = COUPON_TYPES.map((t,i)=>`
     <div class="kpi-card">
       <div class="kpi-value">${counts[i]}</div>
