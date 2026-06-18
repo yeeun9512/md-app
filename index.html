@@ -1019,10 +1019,11 @@ function init() {
       if (!loaded.length) return;
       brandData = loaded.map(r => ({
         name: r.name || r['브랜드명'] || '',
+        nameEn: r.nameEn || r['브랜드 영문명'] || r['영문명'] || '',
         status: r.status || r['운영상태'] || '활성',
-        channel: r.channel || r['채널'] || '온라인',
+        channel: r.channel || r['채널'] || r['온/오프라인'] || '온라인',
         category: r.category || r['카테고리'] || '',
-        memo: r.memo || r['메모'] || '',
+        memo: r.memo || r['메모'] || r['구분'] || '',
       }));
       showBrandUI();
       renderBrandKPI();
