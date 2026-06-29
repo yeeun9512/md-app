@@ -772,14 +772,24 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
 <!-- Modal: Manual Sales Input -->
 <div class="modal-overlay" id="manual-sales-modal" style="display:none;">
   <div class="modal" style="max-width:640px;">
-    <h3 style="margin-bottom:6px;">매출 현황 직접 입력</h3>
-    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">엑셀에서 데이터를 복사해 붙여넣으세요. 첫 행은 헤더(브랜드, 판매량, 매출, 이익, 전주대비, 누적판매량, 누적이익, 쿠폰사용액) 또는 바로 데이터행도 가능합니다.</p>
-    <textarea id="manual-sales-text" style="width:100%;height:220px;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:monospace;background:var(--bg);color:var(--text);resize:vertical;" placeholder="STYLE:WORK	110	2829172	1958460	▲60	367		3661110
+    <h3 style="margin-bottom:12px;">매출 현황 직접 입력</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div class="form-group" style="margin:0;">
+        <label>시작일</label>
+        <input type="date" id="manual-date-start" style="width:100%;">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label>종료일</label>
+        <input type="date" id="manual-date-end" style="width:100%;">
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">엑셀에서 복사 붙여넣기 (탭 구분). 컬럼 순서: 브랜드 · 판매량 · 매출 · 이익 · 전주대비 · 누적판매량 · 누적이익 · 쿠폰사용액</p>
+    <textarea id="manual-sales-text" style="width:100%;height:200px;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:monospace;background:var(--bg);color:var(--text);resize:vertical;" placeholder="STYLE:WORK	110	2829172	1958460	▲60	367		3661110
 ROUNZ BASIC	48	1737773	1317461	▼33	258		85000
 Ray-Ban	47	6836438	2263805	▼18	366		871590"></textarea>
     <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
       <button class="btn btn-secondary btn-sm" onclick="loadCurrentScreenshotData()">📋 6월 데이터 불러오기</button>
-      <span style="font-size:11px;color:var(--text-secondary);">캡쳐본 기준 데이터 자동 입력</span>
+      <span style="font-size:11px;color:var(--text-secondary);">2026-06-01 ~ 06-28 자동 세팅</span>
     </div>
     <div class="modal-footer" style="margin-top:14px;">
       <button class="btn btn-secondary" onclick="closeModal('manual-sales-modal')">취소</button>
@@ -1496,11 +1506,14 @@ function showBrandUI() {
 }
 
 function renderBrandKPI() {
-  const active = brandData.filter(b => b.status === '활성').length;
-  const ended = brandData.filter(b => b.status === '종료').length;
+  const base = brandData.length ? brandData : couponData.map(d => ({
+    name: d.brand, status: d.active === false ? '종료' : '활성', channel: '온라인'
+  }));
+  const active = base.filter(b => b.status === '활성').length;
+  const ended  = base.filter(b => b.status === '종료').length;
   const isOffline = b => { const ch = (b.channel||'').toLowerCase(); return ch.includes('오프라인') || ch === 'only off' || ch === '-'; };
-  const offOnly = brandData.filter(isOffline).length;
-  const onlyVF  = brandData.filter(b => (b.channel||'').toUpperCase() === 'ONLY VF').length;
+  const offOnly = base.filter(isOffline).length;
+  const onlyVF  = base.filter(b => (b.channel||'').toUpperCase() === 'ONLY VF').length;
   const kpi = document.getElementById('brand-kpi');
   kpi.style.display = 'grid';
   let couponKpiHtml = '';
@@ -1512,7 +1525,7 @@ function renderBrandKPI() {
     `).join('');
   }
   kpi.innerHTML = `
-    <div class="kpi-card kpi-accent"><div class="kpi-label">전체 브랜드</div><div class="kpi-value">${brandData.length}</div></div>
+    <div class="kpi-card kpi-accent"><div class="kpi-label">전체 브랜드</div><div class="kpi-value">${base.length}</div></div>
     <div class="kpi-card kpi-green"><div class="kpi-label">활성</div><div class="kpi-value">${active}</div></div>
     <div class="kpi-card kpi-red"><div class="kpi-label">종료</div><div class="kpi-value">${ended}</div></div>
     <div class="kpi-card" style="border-left:4px solid var(--gray)"><div class="kpi-label">오프라인전용</div><div class="kpi-value">${offOnly}</div></div>
@@ -1529,7 +1542,14 @@ function filterBrands() {
   const couponTypeFilter = (document.getElementById('coupon-type-filter-b')||{value:''}).value;
   const couponStatusFilter = (document.getElementById('coupon-status-filter-b')||{value:''}).value;
   const typeIdx = couponTypeFilter ? COUPON_TYPES.indexOf(couponTypeFilter) : -1;
-  brandFiltered = brandData.filter(b => {
+
+  // brandData가 비어있으면 couponData 기준으로 가상 브랜드 생성
+  const baseData = brandData.length ? brandData : couponData.map(d => ({
+    name: d.brand, nameEn: '', status: d.active === false ? '종료' : '활성',
+    channel: '온라인', category: '', memo: ''
+  }));
+
+  brandFiltered = baseData.filter(b => {
     if (status && b.status !== status) return false;
     if (channel && b.channel !== channel) return false;
     if (cat && b.category !== cat) return false;
@@ -3031,6 +3051,8 @@ async function loadCouponFromSheets() {
     }).filter(d => d.brand);
     if (couponData.length) {
       couponPage=1;
+      showBrandUI();
+      document.getElementById('brand-upload-zone').style.display = 'none';
       renderBrandKPI();
       filterBrands();
     }
@@ -3500,10 +3522,18 @@ function renderWeeklyReport() {
 }
 
 function openManualSalesInput() {
-  document.getElementById('manual-sales-modal').style.display = 'flex';
+  const m = document.getElementById('manual-sales-modal');
+  // 기존 조회 기간 있으면 기본값으로 채워줌
+  const s = document.getElementById('manual-date-start');
+  const e = document.getElementById('manual-date-end');
+  if (s && !s.value && weeklyDateStart) s.value = weeklyDateStart;
+  if (e && !e.value && weeklyDateEnd)   e.value = weeklyDateEnd;
+  m.style.display = 'flex';
 }
 
 function loadCurrentScreenshotData() {
+  document.getElementById('manual-date-start').value = '2026-06-01';
+  document.getElementById('manual-date-end').value   = '2026-06-28';
   const rows = [
     'STYLE:WORK\t110\t2829172\t1958460\t▲60\t367\t9115801\t3661110',
     'ROUNZ BASIC\t48\t1737773\t1317461\t▼33\t258\t6876291\t85000',
@@ -3520,6 +3550,9 @@ function loadCurrentScreenshotData() {
 }
 
 function parseManualSalesInput() {
+  const ds = document.getElementById('manual-date-start').value;
+  const de = document.getElementById('manual-date-end').value;
+  if (!ds || !de) { showToast('조회 기간을 입력하세요.'); return; }
   const text = document.getElementById('manual-sales-text').value.trim();
   if (!text) { showToast('데이터를 입력하세요.'); return; }
 
@@ -3546,11 +3579,22 @@ function parseManualSalesInput() {
   if (!data.length) { showToast('파싱할 수 있는 데이터가 없습니다.'); return; }
 
   weeklyReportData = data;
+
+  // 기간 세팅
+  weeklyDateStart = ds;
+  weeklyDateEnd   = de;
+  const sdEl = document.getElementById('weekly-date-start');
+  const edEl = document.getElementById('weekly-date-end');
+  if (sdEl) sdEl.value = ds;
+  if (edEl) edEl.value = de;
+  const lbl = document.getElementById('weekly-date-label');
+  if (lbl) lbl.textContent = ds + ' ~ ' + de;
+
   const badge = document.getElementById('weekly-report-badge');
-  if (badge) { badge.textContent = '직접 입력 · ' + data.length + '개 브랜드'; badge.style.display = ''; }
+  if (badge) { badge.textContent = '직접 입력 · ' + data.length + '개 브랜드 · ' + ds + '~' + de; badge.style.display = ''; }
   closeModal('manual-sales-modal');
   renderWeeklyReport();
-  showToast('✅ ' + data.length + '개 브랜드 데이터 로드 완료');
+  showToast('✅ ' + data.length + '개 브랜드 · ' + ds + ' ~ ' + de);
 }
 
 function renderPromoEfficiency() {
