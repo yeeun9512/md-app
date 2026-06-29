@@ -13,202 +13,217 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --sidebar-bg: #1a1f3e;
+  --sidebar-bg: #18181b;
   --accent: #4F6EF7;
   --accent-light: #6b85f9;
-  --content-bg: #f4f6fb;
+  --bg: #ffffff;
+  --bg-secondary: #f7f7f8;
   --card-bg: #ffffff;
-  --text-primary: #1a1f3e;
-  --text-secondary: #6b7280;
-  --border: #e5e7eb;
+  --content-bg: #f7f7f8;
+  --text: #18181b;
+  --text-primary: #18181b;
+  --text-secondary: #71717a;
+  --border: #e4e4e7;
   --red: #ef4444;
   --orange: #f97316;
   --green: #22c55e;
-  --gray: #9ca3af;
-  --sidebar-width: 220px;
+  --gray: #a1a1aa;
+  --sidebar-width: 210px;
+  --radius: 6px;
 }
-body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--content-bg); color: var(--text-primary); display: flex; min-height: 100vh; }
-h1, h2, h3, .kpi-value, .nav-item, #topbar h2 { font-family: 'Pretendard', sans-serif; }
-button, input, select, textarea { font-family: 'Pretendard', -apple-system, sans-serif; }
-.montserrat { font-family: 'Montserrat', sans-serif; }
+body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--content-bg); color: var(--text-primary); display: flex; min-height: 100vh; font-size: 13px; line-height: 1.5; }
+button, input, select, textarea { font-family: inherit; font-size: 13px; }
 
-/* Sidebar */
-#sidebar {
-  width: var(--sidebar-width); background: var(--sidebar-bg); color: #fff;
-  display: flex; flex-direction: column; flex-shrink: 0; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; transition: transform .3s;
-}
-#sidebar-logo { padding: 24px 20px 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
-#sidebar-logo h1 { font-size: 17px; font-weight: 700; letter-spacing: .5px; font-family: 'Montserrat', sans-serif; }
-#sidebar-logo p { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 3px; font-family: 'Montserrat', sans-serif; letter-spacing: .2px; }
-#sidebar nav { flex: 1; padding: 12px 0; overflow-y: auto; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 11px 20px; cursor: pointer; transition: background .2s; font-size: 14px; color: rgba(255,255,255,.7); border-left: 3px solid transparent; }
-.nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
-.nav-item.active { background: rgba(79,110,247,.2); color: #fff; border-left-color: var(--accent); }
-.nav-item .icon { font-size: 18px; width: 22px; text-align: center; }
-#sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.1); font-size: 12px; color: rgba(255,255,255,.4); }
+/* ── Sidebar ── */
+#sidebar { width: var(--sidebar-width); background: var(--sidebar-bg); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; transition: transform .3s; }
+#sidebar-logo { padding: 20px 16px 14px; border-bottom: 1px solid rgba(255,255,255,.08); }
+#sidebar-logo h1 { font-size: 15px; font-weight: 600; letter-spacing: .3px; font-family: 'Montserrat', sans-serif; }
+#sidebar-logo p { font-size: 11px; color: rgba(255,255,255,.38); margin-top: 3px; font-family: 'Montserrat', sans-serif; }
+#sidebar nav { flex: 1; padding: 8px 0; overflow-y: auto; }
+.nav-item { display: flex; align-items: center; gap: 9px; padding: 9px 16px; cursor: pointer; transition: background .15s; font-size: 13px; color: rgba(255,255,255,.6); border-radius: 0; }
+.nav-item:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.9); }
+.nav-item.active { background: rgba(255,255,255,.1); color: #fff; }
+.nav-item .icon { font-size: 15px; width: 20px; text-align: center; opacity: .7; }
+.nav-item.active .icon { opacity: 1; }
+#sidebar-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,.08); font-size: 11px; color: rgba(255,255,255,.3); }
 
-/* Main */
+/* ── Main ── */
 #main { margin-left: var(--sidebar-width); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
-#topbar { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
-#topbar h2 { font-size: 18px; font-weight: 600; }
-#topbar-right { display: flex; align-items: center; gap: 12px; }
-#btn-settings { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; color: var(--text-secondary); }
-#btn-settings:hover { background: var(--content-bg); }
-#hamburger { display: none; background: none; border: none; cursor: pointer; font-size: 22px; }
+#topbar { background: var(--bg); border-bottom: 1px solid var(--border); padding: 0 24px; height: 48px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+#topbar h2 { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+#topbar-right { display: flex; align-items: center; gap: 10px; }
+#btn-settings { background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 10px; cursor: pointer; font-size: 12px; color: var(--text-secondary); }
+#btn-settings:hover { background: var(--bg-secondary); }
+#hamburger { display: none; background: none; border: none; cursor: pointer; font-size: 20px; }
+#content { flex: 1; padding: 24px; max-width: 1400px; }
 
-#content { flex: 1; padding: 24px; }
+/* ── Tab ── */
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
+.tab-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.tab-header h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.tab-header-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 
-/* Cards */
-.card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 20px; }
-.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
-.kpi-card { background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border); padding: 14px 16px; }
-.kpi-card .kpi-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500; letter-spacing: .2px; }
-.kpi-card .kpi-value { font-size: 22px; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
-.kpi-card .kpi-sub { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+/* ── KPI ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-bottom: 20px; }
+.kpi-card { background: var(--bg); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 16px; }
+.kpi-card .kpi-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+.kpi-card .kpi-value { font-size: 20px; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
+.kpi-card .kpi-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
 .kpi-card .kpi-diff { font-size: 11px; margin-top: 3px; font-weight: 500; }
-.kpi-accent { border-left: 3px solid var(--accent); }
-.kpi-red { border-left: 3px solid var(--red); }
-.kpi-orange { border-left: 3px solid var(--orange); }
-.kpi-green { border-left: 3px solid var(--green); }
-.tab-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 1.5rem; }
-.tab-header h2 { font-size: 18px; font-weight: 600; margin: 0; }
-.tab-header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.kpi-accent .kpi-value { color: var(--accent); }
+.kpi-red .kpi-value { color: var(--red); }
+.kpi-orange .kpi-value { color: var(--orange); }
+.kpi-green .kpi-value { color: var(--green); }
 
-/* Toolbar */
-.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
-.toolbar input[type=text], .toolbar select { height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; color: var(--text-primary); outline: none; }
+/* ── Toolbar ── */
+.toolbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.toolbar input[type=text], .toolbar select { height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; background: var(--bg); color: var(--text-primary); outline: none; }
 .toolbar input[type=text]:focus, .toolbar select:focus { border-color: var(--accent); }
-.toolbar input[type=text] { width: 220px; }
-.btn { height: 36px; padding: 0 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-light); }
-.btn-secondary { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-secondary); }
-.btn-secondary:hover { background: var(--content-bg); }
-.btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.toolbar input[type=text] { width: 200px; }
 
-/* Upload zone */
-.upload-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; margin-bottom: 20px; }
-.upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(79,110,247,.04); }
-.upload-zone .upload-icon { font-size: 40px; margin-bottom: 10px; }
-.upload-zone p { color: var(--text-secondary); font-size: 14px; }
-.upload-zone strong { color: var(--accent); }
+/* ── Buttons ── */
+.btn { height: 32px; padding: 0 14px; border-radius: var(--radius); border: 1px solid transparent; cursor: pointer; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; transition: all .15s; }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent-light); }
+.btn-secondary { background: var(--bg); border-color: var(--border); color: var(--text-secondary); }
+.btn-secondary:hover { background: var(--bg-secondary); }
+.btn-sm { height: 26px; padding: 0 10px; font-size: 11px; }
+
+/* ── Chips ── */
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 4px 10px; border-radius: var(--radius); background: var(--bg); border: 1px solid var(--border); color: var(--text-secondary); cursor: pointer; transition: all .12s; white-space: nowrap; }
+.chip.active, .chip:hover { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+.search-input { height: 32px; flex: 1; min-width: 140px; max-width: 210px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text-primary); outline: none; }
+.search-input:focus { border-color: var(--accent); }
+
+/* ── Card ── */
+.card { background: var(--bg); border-radius: var(--radius); border: 1px solid var(--border); padding: 18px; }
+
+/* ── Upload zone ── */
+.upload-zone { border: 1px dashed var(--border); border-radius: var(--radius); padding: 32px 24px; text-align: center; cursor: pointer; transition: all .15s; margin-bottom: 18px; background: var(--bg); }
+.upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: #f5f7ff; }
+.upload-zone .upload-icon { font-size: 28px; margin-bottom: 8px; }
+.upload-zone p { color: var(--text-secondary); font-size: 13px; }
+.upload-zone strong { color: var(--text-primary); font-weight: 500; }
 .upload-zone input { display: none; }
 
-/* Table */
-.table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); background: var(--card-bg); }
+/* ── Table ── */
+.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-thead th { background: #f9fafb; padding: 10px 12px; text-align: left; font-weight: 600; color: var(--text-secondary); white-space: nowrap; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
-tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+thead th { background: var(--bg-secondary); padding: 8px 12px; text-align: left; font-weight: 500; font-size: 12px; color: var(--text-secondary); white-space: nowrap; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
 tbody tr:last-child { border-bottom: none; }
-tbody tr:hover { background: #f9fafb; }
-tbody td { padding: 9px 12px; white-space: nowrap; }
+tbody tr:hover { background: var(--bg-secondary); }
+tbody td { padding: 8px 12px; white-space: nowrap; }
 
-/* Status badges */
-.badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
-.badge-red { background: #fee2e2; color: #dc2626; }
-.badge-orange { background: #ffedd5; color: #ea580c; }
-.badge-green { background: #dcfce7; color: #16a34a; }
-.badge-gray { background: #f3f4f6; color: #6b7280; }
-.badge-blue { background: #eff6ff; color: #2563eb; }
-.badge-active { background: #dcfce7; color: #16a34a; }
-.badge-out { background: #fee2e2; color: #dc2626; }
-.memo-card { border-radius:12px; padding:14px; position:relative; box-shadow:0 2px 6px rgba(0,0,0,.08); transition:transform .15s; cursor:default; }
-.memo-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.12); }
-.memo-card-title { font-size:13px; font-weight:700; margin-bottom:6px; word-break:break-all; }
-.memo-card-content { font-size:12px; line-height:1.6; color:#374151; white-space:pre-wrap; word-break:break-all; max-height:100px; overflow:hidden; }
-.memo-card-footer { display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
-.memo-card-cat { font-size:10px; padding:2px 7px; border-radius:8px; background:rgba(0,0,0,.08); color:#374151; }
-.memo-card-actions { display:flex; gap:4px; opacity:0; transition:opacity .15s; }
-.memo-card:hover .memo-card-actions { opacity:1; }
-.memo-cat-btn { padding:4px 12px; border-radius:16px; border:1px solid var(--border); background:#fff; font-size:12px; cursor:pointer; transition:all .15s; }
-.memo-cat-btn.active, .memo-cat-btn:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
-.memo-color-btn { padding:4px 12px; border-radius:8px; font-size:12px; cursor:pointer; border:2px solid transparent; transition:border .15s; }
-.memo-color-btn.selected { border-color:#4F6EF7; }
+/* ── Badges ── */
+.badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.badge-red, .badge-out { background: #fef2f2; color: #b91c1c; }
+.badge-orange { background: #fff7ed; color: #c2410c; }
+.badge-green, .badge-active { background: #f0fdf4; color: #15803d; }
+.badge-gray { background: var(--bg-secondary); color: var(--text-secondary); }
+.badge-blue { background: #eff6ff; color: #1d4ed8; }
 
-/* Status select in table */
-.status-select { border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; font-size: 12px; cursor: pointer; background: #fff; }
-
-/* Pagination */
-.pagination { display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
-.page-btn { height: 32px; min-width: 32px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--card-bg); cursor: pointer; font-size: 13px; }
+/* ── Pagination ── */
+.pagination { display: flex; align-items: center; gap: 4px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+.page-btn { height: 28px; min-width: 28px; padding: 0 6px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); cursor: pointer; font-size: 12px; }
 .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.page-btn:hover:not(.active) { background: var(--content-bg); }
-.page-info { font-size: 13px; color: var(--text-secondary); }
+.page-btn:hover:not(.active) { background: var(--bg-secondary); }
+.page-info { font-size: 12px; color: var(--text-secondary); }
 
-/* Calendar */
-.calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.calendar-header h3 { font-size: 18px; font-weight: 600; }
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border-radius: 8px; overflow: hidden; }
-.cal-day-header { background: #f9fafb; padding: 8px; text-align: center; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
-.cal-day { background: var(--card-bg); min-height: 90px; padding: 6px; cursor: pointer; transition: background .15s; }
-.cal-day:hover { background: #f0f4ff; }
-.cal-day.other-month { background: #fafafa; }
-.cal-day.today .day-num { background: var(--accent); color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
-.day-num { font-size: 13px; font-weight: 500; margin-bottom: 4px; display: inline-block; }
-.cal-event { font-size: 10px; padding: 2px 5px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-.ev-프로모션 { background: #fee2e2; color: #dc2626; }
-.ev-SNS { background: #eff6ff; color: #2563eb; }
-.ev-이메일 { background: #f0fdf4; color: #16a34a; }
-.ev-광고 { background: #fefce8; color: #ca8a04; }
-.ev-기타 { background: #f3f4f6; color: #6b7280; }
+/* ── Calendar ── */
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; }
+.cal-day-header { background: var(--bg-secondary); padding: 7px; text-align: center; font-size: 11px; font-weight: 500; color: var(--text-secondary); }
+.cal-day { background: var(--bg); min-height: 80px; padding: 5px 6px; cursor: pointer; transition: background .1s; }
+.cal-day:hover { background: #f5f7ff; }
+.cal-day.other-month { background: var(--bg-secondary); }
+.cal-day.today .day-num { background: var(--accent); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.day-num { font-size: 12px; font-weight: 500; margin-bottom: 3px; display: inline-block; }
+.cal-event { font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.ev-프로모션 { background: #fef2f2; color: #b91c1c; }
+.ev-SNS { background: #eff6ff; color: #1d4ed8; }
+.ev-이메일 { background: #f0fdf4; color: #15803d; }
+.ev-광고 { background: #fefce8; color: #a16207; }
+.ev-기타 { background: var(--bg-secondary); color: var(--text-secondary); }
 
-/* Modal */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.modal { background: var(--card-bg); border-radius: 16px; padding: 28px; width: 100%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
-.modal h3 { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary); }
-.form-group input, .form-group select, .form-group textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 14px; outline: none; background: #fff; color: var(--text-primary); font-family: inherit; }
+/* ── Modal ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal { background: var(--bg); border-radius: 8px; padding: 24px; width: 100%; max-width: 460px; border: 1px solid var(--border); }
+.modal h3 { font-size: 15px; font-weight: 600; margin-bottom: 18px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 5px; color: var(--text-secondary); }
+.form-group input, .form-group select, .form-group textarea { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; font-size: 13px; outline: none; background: var(--bg); color: var(--text-primary); font-family: inherit; }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
-.form-group textarea { resize: vertical; min-height: 80px; }
-.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.form-group textarea { resize: vertical; min-height: 72px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
 
-/* Settings */
-.settings-form { max-width: 560px; }
-.settings-form .form-group input { font-family: monospace; font-size: 13px; }
+/* ── Settings ── */
+.settings-form { max-width: 540px; }
+.settings-form .form-group input { font-family: monospace; font-size: 12px; }
 
-/* Todo */
+/* ── Todo & Memo ── */
 .todo-list { list-style: none; }
-.todo-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); transition: background .15s; }
+.todo-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); transition: background .1s; }
 .todo-item:last-child { border-bottom: none; }
-.todo-item:hover { background: #f9fafb; }
-.todo-item input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+.todo-item:hover { background: var(--bg-secondary); }
+.todo-item input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); flex-shrink: 0; }
 .todo-item.done .todo-text { text-decoration: line-through; color: var(--text-secondary); }
-.todo-text { flex: 1; font-size: 14px; }
+.todo-text { flex: 1; font-size: 13px; }
 .todo-meta { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
 .priority-높음 { color: var(--red); }
 .priority-중간 { color: var(--orange); }
 .priority-낮음 { color: var(--green); }
-/* Hot Items */
-.hot-kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 18px; }
-.hot-kpi { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 16px 18px; display: flex; align-items: center; gap: 14px; }
-.hot-kpi .hk-icon { font-size: 28px; }
-.hot-kpi .hk-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 3px; }
-.hot-kpi .hk-value { font-size: 26px; font-weight: 800; }
-.hot-section { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 14px; overflow: hidden; }
-.hot-section-hd { padding: 13px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-.hot-section-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.hot-cnt { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; color: #fff; }
+.memo-cat-btn { padding: 3px 10px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); font-size: 12px; cursor: pointer; transition: all .12s; }
+.memo-cat-btn.active, .memo-cat-btn:hover { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+.memo-card { border-radius: var(--radius); padding: 12px 14px; position: relative; border: 1px solid var(--border); transition: box-shadow .15s; cursor: default; }
+.memo-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.memo-card-title { font-size: 13px; font-weight: 600; margin-bottom: 5px; word-break: break-all; }
+.memo-card-content { font-size: 12px; line-height: 1.6; color: var(--text-secondary); white-space: pre-wrap; word-break: break-all; max-height: 90px; overflow: hidden; }
+.memo-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.memo-card-cat { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--bg-secondary); color: var(--text-secondary); }
+.memo-card-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .12s; }
+.memo-card:hover .memo-card-actions { opacity: 1; }
+.memo-color-btn { padding: 4px 10px; border-radius: var(--radius); font-size: 12px; cursor: pointer; border: 2px solid transparent; transition: border .12s; }
+.memo-color-btn.selected { border-color: var(--accent); }
+
+/* ── Hot Items ── */
+.hot-kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+.hot-kpi { background: var(--bg); border-radius: var(--radius); border: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+.hot-kpi .hk-icon { font-size: 22px; }
+.hot-kpi .hk-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
+.hot-kpi .hk-value { font-size: 20px; font-weight: 600; }
+.hot-section { background: var(--bg); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 10px; overflow: hidden; }
+.hot-section-hd { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.hot-section-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.hot-cnt { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px; color: #fff; }
 .hot-cnt.red { background: var(--red); }
 .hot-cnt.orange { background: var(--orange); }
 .hot-cnt.yellow { background: #eab308; }
 .hot-hint { font-size: 11px; color: var(--text-secondary); }
-.risk-high { font-size: 12px; font-weight: 700; color: var(--red); }
-.risk-mid { font-size: 12px; font-weight: 700; color: var(--orange); }
-.bar-bg { width: 80px; background: #f3f4f6; border-radius: 99px; height: 5px; margin-top: 3px; }
-.bar-fill { height: 5px; border-radius: 99px; }
+.risk-high { font-size: 12px; font-weight: 600; color: var(--red); }
+.risk-mid { font-size: 12px; font-weight: 600; color: var(--orange); }
+.bar-bg { width: 72px; background: var(--bg-secondary); border-radius: 99px; height: 4px; margin-top: 3px; }
+.bar-fill { height: 4px; border-radius: 99px; }
 
-.notes-area { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 14px; font-family: inherit; outline: none; resize: vertical; min-height: 160px; }
+/* ── Misc ── */
+.notes-area { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; font-size: 13px; font-family: inherit; outline: none; resize: vertical; min-height: 140px; background: var(--bg); }
 .notes-area:focus { border-color: var(--accent); }
+.status-select { border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 12px; cursor: pointer; background: var(--bg); }
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.chart-card { background: var(--bg); border-radius: var(--radius); border: 1px solid var(--border); padding: 18px; }
+.chart-card h4 { font-size: 13px; font-weight: 500; margin-bottom: 14px; color: var(--text-secondary); }
 
-/* Charts */
-.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-.chart-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 20px; }
-.chart-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--text-secondary); }
+/* ── Toast ── */
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--text-primary); color: #fff; padding: 10px 16px; border-radius: var(--radius); font-size: 13px; z-index: 9999; transform: translateY(12px); opacity: 0; transition: all .25s; }
+.toast.show { transform: none; opacity: 1; }
 
-/* Responsive */
+/* ── Setup screen ── */
+#setup-screen { position: fixed; inset: 0; background: var(--sidebar-bg); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+#setup-screen .setup-box { background: var(--bg); border-radius: 8px; padding: 36px; width: 100%; max-width: 460px; text-align: center; }
+#setup-screen .logo { font-size: 40px; margin-bottom: 14px; }
+#setup-screen h1 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+
+/* ── Responsive ── */
 @media (max-width: 768px) {
   #sidebar { transform: translateX(-100%); }
   #sidebar.open { transform: none; }
@@ -216,20 +231,9 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
   #hamburger { display: block; }
   .charts-grid { grid-template-columns: 1fr; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .toolbar input[type=text] { width: 150px; }
 }
-#overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 99; }
+#overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 99; }
 #overlay.show { display: block; }
-
-/* Toast */
-.toast { position: fixed; bottom: 24px; right: 24px; background: #1a1f3e; color: #fff; padding: 12px 20px; border-radius: 10px; font-size: 14px; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,.3); transform: translateY(20px); opacity: 0; transition: all .3s; }
-.toast.show { transform: none; opacity: 1; }
-
-/* Setup screen */
-#setup-screen { position: fixed; inset: 0; background: var(--sidebar-bg); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-#setup-screen .setup-box { background: var(--card-bg); border-radius: 20px; padding: 40px; width: 100%; max-width: 480px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
-#setup-screen .logo { font-size: 48px; margin-bottom: 16px; }
-#setup-screen h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
 #setup-screen p { color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; }
 #setup-screen input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; font-size: 14px; outline: none; margin-bottom: 12px; font-family: monospace; }
 #setup-screen input:focus { border-color: var(--accent); }
@@ -263,14 +267,11 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
     <div class="nav-item" onclick="switchTab('calendar')" data-tab="calendar">
       <span class="icon">📅</span> 마케팅 캘린더
     </div>
-    <div class="nav-item" onclick="switchTab('coupons')" data-tab="coupons">
-      <span class="icon">🎟️</span> 쿠폰관리
-    </div>
     <div class="nav-item" onclick="switchTab('weekly')" data-tab="weekly">
-      <span class="icon">📊</span> 주간보고
+      <span class="icon">📊</span> 매출 현황
     </div>
     <div class="nav-item" onclick="switchTab('brands')" data-tab="brands">
-      <span class="icon">🏷️</span> 브랜드관리
+      <span class="icon">🏷️</span> 브랜드 & 쿠폰
     </div>
     <div class="nav-item" onclick="switchTab('todos')" data-tab="todos">
       <span class="icon">✅</span> 할 일 / 메모
@@ -424,76 +425,33 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
             <button class="chip" onclick="filterCalendar(this,'광고')"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ca8a04;margin-right:3px;"></span>광고</button>
             <button class="chip" onclick="filterCalendar(this,'기타')"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#6b7280;margin-right:3px;"></span>기타</button>
           </div>
+          <button class="btn btn-secondary btn-sm" onclick="togglePipeline()" id="pipeline-toggle-btn">📋 파이프라인</button>
           <button class="btn btn-primary btn-sm" onclick="openEventModal()"><i class="ti ti-plus"></i> 일정 추가</button>
         </div>
       </div>
       <div class="card">
         <div class="calendar-grid" id="cal-grid"></div>
       </div>
-    </div>
-
-    <!-- ===================== 쿠폰관리 ===================== -->
-    <div class="tab-pane" id="tab-coupons">
-      <div class="tab-header">
-        <h2>쿠폰관리</h2>
-        <div class="tab-header-actions">
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('coupon-file').click()"><i class="ti ti-upload"></i> 업로드</button>
-          <button class="btn btn-secondary btn-sm" style="color:var(--red);" onclick="resetCouponData()"><i class="ti ti-trash"></i> 초기화</button>
+      <div id="promo-pipeline" style="display:none;margin-top:1.5rem;">
+        <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:10px;">프로모션 파이프라인 <span style="font-size:11px;font-weight:400;">— 클릭해서 단계 변경</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#6366f1;padding:6px 10px;background:#ede9fe;border-radius:6px 6px 0 0;margin-bottom:0;">기획중</div>
+            <div id="pipe-plan" style="background:var(--bg-secondary);border-radius:0 0 6px 6px;min-height:80px;padding:8px;display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#d97706;padding:6px 10px;background:#fff7ed;border-radius:6px 6px 0 0;margin-bottom:0;">집행중</div>
+            <div id="pipe-active" style="background:var(--bg-secondary);border-radius:0 0 6px 6px;min-height:80px;padding:8px;display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#16a34a;padding:6px 10px;background:#d1fae5;border-radius:6px 6px 0 0;margin-bottom:0;">완료</div>
+            <div id="pipe-done" style="background:var(--bg-secondary);border-radius:0 0 6px 6px;min-height:80px;padding:8px;display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
         </div>
       </div>
-
-      <!-- 업로드 존 -->
-      <div class="upload-zone" id="coupon-upload-zone" onclick="document.getElementById('coupon-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'coupon-upload-zone')" ondrop="handleDrop(event,'coupons')">
-        <div class="upload-icon">🎟️</div>
-        <p><strong>쿠폰 브랜드 정리 XLSX</strong> 파일을 업로드하세요</p>
-        <p style="font-size:12px;margin-top:6px;">기존 정리 파일 업로드 후 추가/수정 가능</p>
-        <input type="file" id="coupon-file" accept=".xlsx,.xls" onchange="handleCouponFile(event)">
-      </div>
-
-      <!-- KPI -->
-      <div id="coupon-kpi" class="kpi-grid" style="display:none;"></div>
-
-      <!-- 툴바 -->
-      <div class="toolbar" id="coupon-toolbar" style="display:none;">
-        <input class="search-input" id="coupon-search" placeholder="브랜드명 검색..." oninput="dFilterCoupons()">
-        <select id="coupon-type-filter" onchange="filterCoupons()">
-          <option value="">전체 쿠폰</option>
-          <option value="퍼플 12%">퍼플 12%</option>
-          <option value="퍼플 20%">퍼플 20%</option>
-          <option value="레드 12%">레드 12%</option>
-          <option value="레드 20%">레드 20%</option>
-          <option value="블루 12%">블루 12%</option>
-          <option value="블루 20%">블루 20%</option>
-          <option value="신규 12% 자동">신규 12% 자동</option>
-          <option value="신규 20% 수동">신규 20% 수동</option>
-          <option value="신규 20% 자동">신규 20% 자동</option>
-        </select>
-        <select id="coupon-status-filter" onchange="filterCoupons()">
-          <option value="">전체 상태</option>
-          <option value="진행">진행만</option>
-          <option value="제외">제외만</option>
-        </select>
-        <select id="coupon-brand-filter" onchange="filterCoupons()">
-          <option value="">활성+종료 전체</option>
-          <option value="활성" selected>활성 브랜드만</option>
-          <option value="종료">종료 브랜드만</option>
-        </select>
-        <button class="btn btn-primary btn-sm" onclick="openAddBrandModal()">+ 브랜드 추가</button>
-        <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;" onclick="resetCouponData()">🗑️ 초기화</button>
-        <span class="page-info" id="coupon-count"></span>
-      </div>
-
-      <!-- 테이블 -->
-      <div id="coupon-table-wrap" class="table-wrap" style="display:none; overflow-x:auto;">
-        <table id="coupon-table">
-          <thead id="coupon-thead"></thead>
-          <tbody id="coupon-tbody"></tbody>
-        </table>
-      </div>
-      <div class="pagination" id="coupon-pagination"></div>
     </div>
 
-    <!-- ===================== 주간보고 ===================== -->
+    <!-- ===================== 매출 현황 ===================== -->
     <div class="tab-pane" id="tab-weekly">
       <!-- Header row -->
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem;">
@@ -558,10 +516,25 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
       <!-- Channel bar chart -->
       <div id="weekly-channel-bars" style="display:none;padding:14px 16px;background:var(--bg-secondary);border-radius:10px;margin-bottom:1.5rem;"></div>
 
+      <!-- ROI Simulator -->
+      <div id="roi-sim-wrap" style="display:none;background:var(--bg-secondary);border-radius:10px;padding:14px 16px;margin-bottom:1.5rem;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+          💡 광고비 시뮬레이터
+          <span style="font-size:11px;font-weight:400;color:var(--text-secondary);">과거 ROAS 기반 예측</span>
+        </div>
+        <div style="display:grid;grid-template-columns:auto auto auto 1fr;gap:10px;align-items:center;flex-wrap:wrap;">
+          <select id="roi-brand" style="border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:13px;background:var(--bg);color:var(--text);" onchange="calcROI()">
+            <option value="">전체 브랜드</option>
+          </select>
+          <input type="number" id="roi-budget" placeholder="예산 (원)" style="border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:13px;width:140px;background:var(--bg);color:var(--text);" oninput="calcROI()">
+          <div id="roi-result" style="font-size:13px;color:var(--text-secondary);">예산 입력 후 예측값이 표시됩니다</div>
+        </div>
+      </div>
+
       <!-- Weekly report upload + table -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:13px;font-weight:600;color:var(--text-secondary);">브랜드별 상세 <span id="weekly-report-badge" style="display:none;font-size:11px;background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:5px;font-weight:400;margin-left:6px;"></span></div>
-        <button class="btn btn-sm" onclick="document.getElementById('weekly-report-file').click()"><i class="ti ti-upload"></i> 주간보고 엑셀</button>
+        <button class="btn btn-sm" onclick="document.getElementById('weekly-report-file').click()"><i class="ti ti-upload"></i> 매출 현황 엑셀</button>
         <input type="file" id="weekly-report-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleWeeklyReportFile(event)">
       </div>
       <div id="weekly-table-wrap" class="table-wrap" style="display:none;">
@@ -570,6 +543,7 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
           <tbody id="weekly-tbody"></tbody>
         </table>
       </div>
+      <div id="coupon-insight" style="display:none;"></div>
 
       <!-- Notes -->
       <div id="weekly-notes-wrap" style="display:none;margin-top:1.5rem;"></div>
@@ -627,13 +601,15 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
       </div>
     </div>
 
-    <!-- ===================== 브랜드관리 ===================== -->
+    <!-- ===================== 브랜드 & 쿠폰 ===================== -->
     <div class="tab-pane" id="tab-brands">
       <div class="tab-header">
-        <h2>브랜드관리</h2>
+        <h2>브랜드 & 쿠폰</h2>
         <div class="tab-header-actions">
           <button class="btn btn-primary btn-sm" onclick="openBrandModal()"><i class="ti ti-plus"></i> 브랜드 추가</button>
           <button class="btn btn-secondary btn-sm" onclick="reuploadBrand()"><i class="ti ti-upload"></i> 업로드</button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('coupon-file-brands').click()"><i class="ti ti-upload"></i> 쿠폰 업로드</button>
+          <input type="file" id="coupon-file-brands" accept=".xlsx,.xls" style="display:none" onchange="handleCouponFile(event)">
         </div>
       </div>
       <div class="upload-zone" id="brand-upload-zone" onclick="document.getElementById('brand-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'brand-upload-zone')" ondrop="handleDrop(event,'brands')">
@@ -656,11 +632,19 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
         <button class="chip" onclick="setBrandChannel(this,'온라인')" data-bchannel="온라인">온라인</button>
         <button class="chip" onclick="setBrandChannel(this,'오프라인전용')" data-bchannel="오프라인전용">오프라인</button>
         <div style="flex:1;"></div>
+        <select id="coupon-type-filter-b" onchange="filterBrands()" style="border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:13px;background:var(--bg);color:var(--text);">
+          <option value="">전체 쿠폰</option>
+        </select>
+        <select id="coupon-status-filter-b" onchange="filterBrands()" style="border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:13px;background:var(--bg);color:var(--text);">
+          <option value="">전체 상태</option>
+          <option value="진행">진행만</option>
+          <option value="제외">제외만</option>
+        </select>
         <span class="page-info" id="brand-count"></span>
       </div>
-      <div id="brand-table-wrap" class="table-wrap" style="display:none;">
+      <div id="brand-table-wrap" class="table-wrap" style="display:none;overflow-x:auto;">
         <table>
-          <thead>
+          <thead id="brand-thead">
             <tr>
               <th onclick="sortBrands('name')" style="cursor:pointer;">브랜드명 <span id="bsort-name">↕</span></th>
               <th onclick="sortBrands('status')" style="cursor:pointer;">운영상태 <span id="bsort-status">↕</span></th>
@@ -736,8 +720,16 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
     </div>
     <div class="form-group">
       <label>유형</label>
-      <select id="ev-type">
+      <select id="ev-type" onchange="toggleStageField()">
         <option>프로모션</option><option>SNS</option><option>이메일</option><option>광고</option><option>기타</option>
+      </select>
+    </div>
+    <div class="form-group" id="ev-stage-wrap" style="display:none;">
+      <label>단계</label>
+      <select id="ev-stage">
+        <option value="기획중">기획중</option>
+        <option value="집행중">집행중</option>
+        <option value="완료">완료</option>
       </select>
     </div>
     <div class="form-group">
@@ -752,6 +744,17 @@ tbody td { padding: 9px 12px; white-space: nowrap; }
       <button class="btn btn-secondary" onclick="closeModal('event-modal')">취소</button>
       <button id="ev-delete-btn" class="btn" style="background:#fee2e2;color:#dc2626;display:none;" onclick="deleteEvent()">삭제</button>
       <button class="btn btn-primary" onclick="saveEvent()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Brand Health -->
+<div class="modal-overlay" id="brand-health-modal" style="display:none;">
+  <div class="modal" style="max-width:480px;">
+    <h3 id="bhm-title" style="margin-bottom:1rem;"></h3>
+    <div id="bhm-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('brand-health-modal')">닫기</button>
     </div>
   </div>
 </div>
@@ -1164,7 +1167,7 @@ async function saveSheetData(sheet, data) {
 // ============================================================
 // NAVIGATION
 // ============================================================
-const tabTitles = { inventory:'재고관리', products:'상품관리', calendar:'마케팅 캘린더', coupons:'쿠폰관리', weekly:'주간보고', brands:'브랜드관리', todos:'할 일 / 업무 메모' };
+const tabTitles = { inventory:'재고관리', products:'상품관리', calendar:'마케팅 캘린더', coupons:'브랜드 & 쿠폰', weekly:'매출 현황', brands:'브랜드 & 쿠폰', todos:'할 일 / 업무 메모' };
 const TODO_PW = '0001'; // 비밀번호 변경 시 여기 수정
 let todoUnlocked = false;
 let pendingTab = null;
@@ -1457,6 +1460,10 @@ function parseBrandRows(header, dataRows) {
 function showBrandUI() {
   document.getElementById('brand-toolbar').style.display = 'flex';
   document.getElementById('brand-table-wrap').style.display = 'block';
+  const ctf = document.getElementById('coupon-type-filter-b');
+  if (ctf && ctf.options.length <= 1) {
+    COUPON_TYPES.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; ctf.appendChild(o); });
+  }
 }
 
 function renderBrandKPI() {
@@ -1467,12 +1474,21 @@ function renderBrandKPI() {
   const onlyVF  = brandData.filter(b => (b.channel||'').toUpperCase() === 'ONLY VF').length;
   const kpi = document.getElementById('brand-kpi');
   kpi.style.display = 'grid';
+  let couponKpiHtml = '';
+  if (couponData.length) {
+    const activeBrands = couponData.filter(d => isCouponBrandActive(d));
+    const counts = COUPON_TYPES.map((t,i) => activeBrands.filter(d=>d.statuses[i]==='진행').length);
+    couponKpiHtml = COUPON_TYPES.map((t,i) => `
+      <div class="kpi-card"><div class="kpi-label">${t} 진행</div><div class="kpi-value">${counts[i]}</div></div>
+    `).join('');
+  }
   kpi.innerHTML = `
     <div class="kpi-card kpi-accent"><div class="kpi-label">전체 브랜드</div><div class="kpi-value">${brandData.length}</div></div>
     <div class="kpi-card kpi-green"><div class="kpi-label">활성</div><div class="kpi-value">${active}</div></div>
     <div class="kpi-card kpi-red"><div class="kpi-label">종료</div><div class="kpi-value">${ended}</div></div>
     <div class="kpi-card" style="border-left:4px solid var(--gray)"><div class="kpi-label">오프라인전용</div><div class="kpi-value">${offOnly}</div></div>
     <div class="kpi-card" style="border-left:4px solid #f59e0b"><div class="kpi-label">ONLY VF</div><div class="kpi-value">${onlyVF}</div></div>
+    ${couponKpiHtml}
   `;
 }
 
@@ -1481,11 +1497,20 @@ function filterBrands() {
   const status = document.getElementById('brand-status-filter')?.value || '';
   const channel = document.getElementById('brand-channel-filter')?.value || '';
   const cat = document.getElementById('brand-cat-filter')?.value || '';
+  const couponTypeFilter = (document.getElementById('coupon-type-filter-b')||{value:''}).value;
+  const couponStatusFilter = (document.getElementById('coupon-status-filter-b')||{value:''}).value;
+  const typeIdx = couponTypeFilter ? COUPON_TYPES.indexOf(couponTypeFilter) : -1;
   brandFiltered = brandData.filter(b => {
     if (status && b.status !== status) return false;
     if (channel && b.channel !== channel) return false;
     if (cat && b.category !== cat) return false;
     if (search && !b.name.toLowerCase().includes(search)) return false;
+    if (couponTypeFilter && couponStatusFilter) {
+      const cd = couponData.find(d => normBrand(d.brand) === normBrand(b.name));
+      if (!cd) return false;
+      if (typeIdx >= 0) { if (cd.statuses[typeIdx] !== couponStatusFilter) return false; }
+      else { if (!cd.statuses.some(s => s === couponStatusFilter)) return false; }
+    }
     return true;
   });
   brandFiltered.sort((a,b) => {
@@ -1510,12 +1535,38 @@ function renderBrandTable() {
   const start = (brandPage-1)*BRAND_PER_PAGE;
   const page = brandFiltered.slice(start, start+BRAND_PER_PAGE);
   const tbody = document.getElementById('brand-tbody');
+  // Update thead coupon columns
+  const thead = document.getElementById('brand-thead');
+  if (thead) {
+    const couponHeaders = couponData.length ? COUPON_TYPES.map(t=>`<th style="min-width:70px;font-size:11px;">${t}</th>`).join('') : '';
+    thead.innerHTML = `<tr>
+      <th onclick="sortBrands('name')" style="cursor:pointer;">브랜드명 <span id="bsort-name">↕</span></th>
+      <th onclick="sortBrands('status')" style="cursor:pointer;">운영상태 <span id="bsort-status">↕</span></th>
+      <th onclick="sortBrands('channel')" style="cursor:pointer;">채널 <span id="bsort-channel">↕</span></th>
+      <th onclick="sortBrands('memo')" style="cursor:pointer;">구분 <span id="bsort-memo">↕</span></th>
+      <th>메모</th>
+      <th>관리</th>
+      ${couponHeaders}
+    </tr>`;
+  }
   tbody.innerHTML = page.map((b, i) => {
     const gi = brandData.indexOf(b);
     const stBadge = b.status === '활성' ? 'badge-green' : 'badge-red';
     const ch = (b.channel||'').toUpperCase();
     const chBadge = (ch==='오프라인'||ch==='오프라인전용'||ch==='-') ? 'badge-gray' : ch==='온+오프' ? 'badge-blue' : ch==='ONLY VF' ? 'badge-orange' : 'badge-active';
     const memoBadge = b.memo ? `<span class="badge" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;">${b.memo}</span>` : '-';
+    let couponCells = '';
+    if (couponData.length) {
+      const cd = couponData.find(d => normBrand(d.brand) === normBrand(b.name));
+      couponCells = COUPON_TYPES.map((t, ci) => {
+        if (!cd) return `<td style="text-align:center;color:var(--text-secondary);font-size:12px">-</td>`;
+        const realIdx = couponData.indexOf(cd);
+        const s = cd.statuses[ci];
+        const color = s === '진행' ? '#1D9E75' : '#94a3b8';
+        const bg = s === '진행' ? '#d1fae5' : 'var(--bg-secondary)';
+        return `<td style="text-align:center;"><span style="cursor:pointer;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:${bg};color:${color}" onclick="toggleCouponFromBrand(${realIdx},${ci})">${s}</span></td>`;
+      }).join('');
+    }
     return `<tr>
       <td style="font-weight:600;">${b.name}${b.nameEn ? `<div style="font-size:11px;color:var(--text-secondary);font-weight:400;">${b.nameEn}</div>` : ''}</td>
       <td><span class="badge ${stBadge}">${b.status}</span></td>
@@ -1523,6 +1574,7 @@ function renderBrandTable() {
       <td>${memoBadge}</td>
       <td style="font-size:12px;color:var(--text-secondary);">-</td>
       <td><button class="btn btn-secondary btn-sm" onclick="editBrand(${gi})">수정</button></td>
+      ${couponCells}
     </tr>`;
   }).join('');
   renderPagination('brand', brandFiltered.length, BRAND_PER_PAGE, brandPage);
@@ -1564,7 +1616,13 @@ function saveBrand() {
     memo: document.getElementById('brand-memo').value.trim(),
   };
   const idx = parseInt(document.getElementById('brand-edit-idx').value);
-  if (idx >= 0) brandData[idx] = b; else brandData.push(b);
+  if (idx >= 0) brandData[idx] = b; else {
+    brandData.push(b);
+    if (!couponData.some(d => normBrand(d.brand) === normBrand(b.name))) {
+      couponData.push({brand: b.name, statuses: Array(9).fill('진행'), active: true});
+      saveCouponToSheets();
+    }
+  }
   saveSheetData('브랜드', brandData).catch(()=>{});
   closeModal('brand-modal');
   showBrandUI();
@@ -2323,6 +2381,7 @@ function renderCalendar() {
   }
 
   grid.innerHTML = html;
+  if (pipelineVisible) renderPipeline();
 }
 
 function openEventModal(dateStr) {
@@ -2334,6 +2393,10 @@ function openEventModal(dateStr) {
   document.getElementById('ev-content').value = '';
   document.getElementById('ev-delete-btn').style.display = 'none';
   document.getElementById('event-modal-title').textContent = '이벤트 추가';
+  const stageEl = document.getElementById('ev-stage');
+  if (stageEl) stageEl.value = '기획중';
+  const stageWrap = document.getElementById('ev-stage-wrap');
+  if (stageWrap) stageWrap.style.display = ''; // 프로모션이 기본값이므로 보임
   document.getElementById('event-modal').style.display = 'flex';
 }
 
@@ -2349,18 +2412,24 @@ function editEvent(e, idx) {
   document.getElementById('ev-content').value = ev.content || '';
   document.getElementById('ev-delete-btn').style.display = 'inline-flex';
   document.getElementById('event-modal-title').textContent = '이벤트 수정';
+  const stageEl = document.getElementById('ev-stage');
+  if (stageEl) stageEl.value = ev.stage || '기획중';
+  const stageWrap = document.getElementById('ev-stage-wrap');
+  if (stageWrap) stageWrap.style.display = ev.type === '프로모션' ? '' : 'none';
   document.getElementById('event-modal').style.display = 'flex';
 }
 
 function saveEvent() {
   const startDate = document.getElementById('ev-start-date').value;
   const endDate = document.getElementById('ev-end-date').value;
+  const evType = document.getElementById('ev-type').value;
   const ev = {
     startDate,
     endDate: endDate >= startDate ? endDate : startDate,
-    type: document.getElementById('ev-type').value,
+    type: evType,
     title: document.getElementById('ev-title').value,
     content: document.getElementById('ev-content').value,
+    stage: evType === '프로모션' ? (document.getElementById('ev-stage') ? document.getElementById('ev-stage').value : '기획중') : '',
   };
   if (!ev.title) { showToast('제목을 입력하세요.'); return; }
   if (!ev.startDate) { showToast('시작일을 입력하세요.'); return; }
@@ -2656,6 +2725,16 @@ const COUPON_COLS = [2,4,6,8,10,12,16,18,20];
 
 // Each entry: {brand, statuses:[...9 '진행'|'제외'], active: true|false}
 // active=false → 종료 브랜드
+
+function normBrand(s) { return String(s || '').trim().toUpperCase().replace(/\s+/g, ' '); }
+function findBrandEntry(brandName) {
+  const n = normBrand(brandName);
+  return brandData.find(b =>
+    normBrand(b.name) === n ||
+    (b.nameEn && normBrand(b.nameEn) === n)
+  );
+}
+
 let couponData = [];
 let couponPage = 1;
 const COUPON_PAGE_SIZE = 50;
@@ -2688,9 +2767,9 @@ function processCouponFile(file) {
       couponData = data;
       couponPage = 1;
       showToast(`쿠폰 데이터 ${data.length}개 브랜드 로드 완료`);
-      showCouponUI();
-      renderCouponKPI();
-      renderCouponTable();
+      showBrandUI();
+      renderBrandKPI();
+      filterBrands();
       saveCouponToSheets();
     } catch(err) {
       showToast('쿠폰 파일 파싱 오류: '+err.message);
@@ -2707,7 +2786,7 @@ function showCouponUI() {
 }
 
 function isCouponBrandActive(d) {
-  const bi = brandData.find(b => b.name === d.brand || (b.nameEn && b.nameEn.toUpperCase() === d.brand.toUpperCase()));
+  const bi = findBrandEntry(d.brand);
   return bi ? bi.status !== '종료' : d.active !== false;
 }
 
@@ -2736,7 +2815,7 @@ function getFilteredCouponData() {
   const typeIdx = typeFilter ? COUPON_TYPES.indexOf(typeFilter) : -1;
   return couponData.filter(d => {
     if (q && !d.brand.toLowerCase().includes(q)) return false;
-    const bi = brandData.find(b => b.name === d.brand || (b.nameEn && b.nameEn.toUpperCase() === d.brand.toUpperCase()));
+    const bi = findBrandEntry(d.brand);
     const isActive = bi ? bi.status !== '종료' : d.active !== false;
     if (brandFilter === '활성' && !isActive) return false;
     if (brandFilter === '종료' && isActive) return false;
@@ -2771,7 +2850,7 @@ function renderCouponTable() {
   // find real index in couponData for each filtered row
   document.getElementById('coupon-tbody').innerHTML = page.map(d => {
     const realIdx = couponData.indexOf(d);
-    const brandInfo = brandData.find(b => b.name === d.brand || (b.nameEn && b.nameEn.toUpperCase() === d.brand.toUpperCase()));
+    const brandInfo = findBrandEntry(d.brand);
     const isActive = brandInfo ? brandInfo.status !== '종료' : d.active !== false;
     const rowStyle = isActive ? '' : 'opacity:0.5;background:#fafafa;';
     return `<tr style="${rowStyle}">
@@ -2805,6 +2884,15 @@ function toggleCouponStatus(dataIdx, couponIdx) {
   renderCouponKPI();
   renderCouponTable();
   saveCouponToSheets();
+}
+
+function toggleCouponFromBrand(dataIdx, couponIdx) {
+  if (!couponData[dataIdx]) return;
+  const cur = couponData[dataIdx].statuses[couponIdx];
+  couponData[dataIdx].statuses[couponIdx] = cur === '진행' ? '제외' : '진행';
+  saveCouponToSheets();
+  renderBrandKPI();
+  filterBrands();
 }
 
 function toggleCouponActive(dataIdx) {
@@ -2892,9 +2980,8 @@ async function loadCouponFromSheets() {
     }).filter(d => d.brand);
     if (couponData.length) {
       couponPage=1;
-      showCouponUI();
-      renderCouponKPI();
-      renderCouponTable();
+      renderBrandKPI();
+      filterBrands();
     }
   } catch(e) {}
 }
@@ -2930,7 +3017,7 @@ function applyWeeklyDates() {
 function handleWeeklyReportFile(e) {
   const file = e.target.files[0];
   if (!file) return;
-  showToast('주간보고 파일 파싱 중...');
+  showToast('매출 현황 파일 파싱 중...');
   const reader = new FileReader();
   reader.onload = ev => {
     try {
@@ -2963,7 +3050,7 @@ function parseWeeklyReport(rows, fileName) {
     const row = rows[i];
     const brand = get(row, '브랜드', 'BRAND');
     if (!brand || ['소계','합계','top10','합 계','소 계'].includes(brand)) continue;
-    const bd   = brandData.find(b => b.name === brand || b.nameEn === brand || (b.nameEn && b.nameEn.toUpperCase() === brand.toUpperCase()));
+    const bd   = findBrandEntry(brand);
     const type = bd ? (bd.memo || '') : '';
     data.push({
       brand, type,
@@ -2971,9 +3058,9 @@ function parseWeeklyReport(rows, fileName) {
       revenue:   getNum(row, '기간별 매출(실결제가)', '기간별 매출', '매출'),
       profit:    getNum(row, '기간별 이익', '이익'),
       prevDiff:  get(row,  '이전 기간 판매량 증감', '전주대비', '증감'),
-      cumQty:    getNum(row, '누적 판매량'),
-      cumProfit: getNum(row, '누적 이익'),
-      coupon:    getNum(row, '쿠폰사용액', '쿠폰.2', '쿠폰'),
+      cumQty:    getNum(row, '연누적 판매량', '누적 판매량', '연누적판매량'),
+      cumProfit: getNum(row, '연누적 이익', '누적 이익', '연누적이익'),
+      coupon:    getNum(row, '쿠폰사용액', '쿠폰'),
     });
   }
 
@@ -2981,7 +3068,7 @@ function parseWeeklyReport(rows, fileName) {
   const badge = document.getElementById('weekly-report-badge');
   if (badge) { badge.textContent = (fileName || '업로드됨') + ' · ' + data.length + '개 브랜드'; badge.style.display = ''; }
   renderWeeklyReport();
-  showToast('✅ 주간보고 ' + data.length + '개 브랜드 로드');
+  showToast('✅ 매출 현황 ' + data.length + '개 브랜드 로드');
 }
 
 function handleNaverAdFile(e) {
@@ -3272,6 +3359,7 @@ function renderWeeklyReport() {
       <th style="text-align:right">전주대비</th>
       ${hasAd ? '<th style="text-align:right">네이버 광고비</th><th style="text-align:right">ROAS</th>' : ''}
       <th style="text-align:right">쿠폰</th>
+      <th style="text-align:right">쿠폰비율</th>
     </tr>`;
 
     document.getElementById('weekly-tbody').innerHTML = merged.map((r, i) => {
@@ -3281,9 +3369,12 @@ function renderWeeklyReport() {
       const diffStr = diffRaw ? (hasArrow ? diffRaw : (diffNum > 0 ? '▲' + diffNum : diffNum < 0 ? '▼' + Math.abs(diffNum) : '-')) : '-';
       const diffColor = diffStr.includes('▲') ? '#1D9E75' : diffStr.includes('▼') ? '#ef4444' : 'var(--text-secondary)';
       const ts = typeStyle[r.type] || 'background:var(--bg-secondary);color:var(--text-secondary)';
+      const couponRatioRaw = r.revenue > 0 ? r.coupon / r.revenue * 100 : 0;
+      const couponRatioStr = couponRatioRaw > 0 ? couponRatioRaw.toFixed(1) + '%' : '-';
+      const couponRatioStyle = couponRatioRaw >= 30 ? 'color:#dc2626;font-weight:600' : couponRatioRaw >= 20 ? 'color:#d97706;font-weight:600' : '';
       return `<tr>
         <td style="color:var(--text-secondary);font-size:12px">${i+1}</td>
-        <td style="font-weight:600">${r.brand}</td>
+        <td style="font-weight:600;cursor:pointer;color:var(--accent)" onclick="openBrandHealth('${r.brand}')">${r.brand}</td>
         <td>${r.type ? `<span style="${ts};padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600">${r.type}</span>` : '<span style="color:var(--text-secondary);font-size:12px">-</span>'}</td>
         <td style="text-align:right">${r.qty.toLocaleString()}</td>
         <td style="text-align:right">${r.revenue.toLocaleString()}</td>
@@ -3294,6 +3385,7 @@ function renderWeeklyReport() {
           <td style="text-align:right;color:#6366f1;font-weight:600">${r.roas ? r.roas.toFixed(1) + 'x' : '-'}</td>
         ` : ''}
         <td style="text-align:right">${r.coupon > 0 ? r.coupon.toLocaleString() : '-'}</td>
+        <td style="text-align:right;${couponRatioStyle}">${couponRatioStr}</td>
       </tr>`;
     }).join('') + `<tr style="background:var(--bg-secondary);font-weight:600;font-size:13px;">
       <td colspan="3" style="padding-left:10px;">합계</td>
@@ -3303,8 +3395,32 @@ function renderWeeklyReport() {
       <td></td>
       ${hasAd ? `<td style="text-align:right">${merged.reduce((s,r)=>s+r.naverCost,0).toLocaleString()}</td><td style="text-align:right;color:#6366f1">${overallRoas ? overallRoas.toFixed(1)+'x' : '-'}</td>` : ''}
       <td style="text-align:right">${totalCoupon.toLocaleString()}</td>
+      <td style="text-align:right">${totalRevenue > 0 ? (totalCoupon / totalRevenue * 100).toFixed(1) + '%' : '-'}</td>
     </tr>`;
   }
+
+  // Coupon insight
+  const couponInsight = document.getElementById('coupon-insight');
+  if (couponInsight) {
+    const highCoupon = merged.filter(r => r.revenue > 0 && (r.coupon / r.revenue * 100) >= 20).map(r => r.brand);
+    if (highCoupon.length) {
+      couponInsight.style.display = 'block';
+      couponInsight.innerHTML = `<div style="font-size:12px;color:#d97706;margin-top:8px;padding:8px 12px;background:#fff7ed;border-radius:6px;border:1px solid #fed7aa;">⚠️ 쿠폰 의존도 높은 브랜드 (20% 이상): <strong>${highCoupon.join(', ')}</strong></div>`;
+    } else {
+      couponInsight.style.display = 'none';
+    }
+  }
+
+  // ROI Simulator - show and update brand list
+  const roiWrap = document.getElementById('roi-sim-wrap');
+  if (roiWrap) roiWrap.style.display = 'block';
+  const roiBrandSel = document.getElementById('roi-brand');
+  if (roiBrandSel) {
+    const brands = [...new Set(merged.map(r => r.brand))].sort();
+    const current = roiBrandSel.value;
+    roiBrandSel.innerHTML = '<option value="">전체 브랜드</option>' + brands.map(b => `<option value="${b}"${b === current ? ' selected' : ''}>${b}</option>`).join('');
+  }
+  calcROI();
 
   // Notes area
   const notesWrap = document.getElementById('weekly-notes-wrap');
@@ -3337,6 +3453,167 @@ function saveWeeklyNotes() {
   const n  = document.getElementById('weekly-notes');
   const nn = document.getElementById('weekly-notes-next');
   localStorage.setItem(key, JSON.stringify({ notes: n ? n.value : '', next: nn ? nn.value : '' }));
+}
+
+// ============================================================
+// PIPELINE
+// ============================================================
+function toggleStageField() {
+  const wrap = document.getElementById('ev-stage-wrap');
+  if (wrap) wrap.style.display = document.getElementById('ev-type').value === '프로모션' ? '' : 'none';
+}
+
+let pipelineVisible = false;
+function togglePipeline() {
+  pipelineVisible = !pipelineVisible;
+  const el = document.getElementById('promo-pipeline');
+  const btn = document.getElementById('pipeline-toggle-btn');
+  if (el) el.style.display = pipelineVisible ? 'block' : 'none';
+  if (btn) btn.style.background = pipelineVisible ? 'var(--primary)' : '';
+  if (btn) btn.style.color = pipelineVisible ? '#fff' : '';
+  if (pipelineVisible) renderPipeline();
+}
+
+function renderPipeline() {
+  const stages = { '기획중': 'pipe-plan', '집행중': 'pipe-active', '완료': 'pipe-done' };
+  const promos = calEvents.filter(e => e.type === '프로모션');
+  Object.keys(stages).forEach(stage => {
+    const el = document.getElementById(stages[stage]);
+    if (!el) return;
+    const items = promos.filter(e => (e.stage || '기획중') === stage);
+    if (!items.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:12px;">없음</div>'; return; }
+    el.innerHTML = items.map(e => {
+      const realIdx = calEvents.indexOf(e);
+      const nextStages = { '기획중': '집행중', '집행중': '완료', '완료': null };
+      const nextLabel  = { '기획중': '→ 집행중', '집행중': '→ 완료', '완료': null };
+      const cur = e.stage || '기획중';
+      return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;cursor:pointer;" onclick="editEvent(event,${realIdx})">
+        <div style="font-size:12px;font-weight:600;margin-bottom:3px;">${e.title}</div>
+        <div style="font-size:11px;color:var(--text-secondary);">${e.startDate}${e.endDate && e.endDate !== e.startDate ? ' ~ ' + e.endDate : ''}</div>
+        ${nextStages[cur] ? `<button class="btn btn-sm" style="margin-top:6px;font-size:11px;padding:2px 8px;" onclick="advancePipelineStage(event,${realIdx},'${nextStages[cur]}')">${nextLabel[cur]}</button>` : '<div style="font-size:11px;color:#16a34a;margin-top:4px;">✓ 완료</div>'}
+      </div>`;
+    }).join('');
+  });
+}
+
+function advancePipelineStage(e, idx, newStage) {
+  e.stopPropagation();
+  calEvents[idx].stage = newStage;
+  localStorage.setItem('calEvents', JSON.stringify(calEvents));
+  saveSheetData('캘린더', calEvents);
+  renderPipeline();
+}
+
+// ============================================================
+// ROI SIMULATOR
+// ============================================================
+function calcROI() {
+  const brand = (document.getElementById('roi-brand') || {value:''}).value;
+  const budget = parseFloat(((document.getElementById('roi-budget') || {value:''}).value).replace(/,/g,'')) || 0;
+  const result = document.getElementById('roi-result');
+  if (!result) return;
+  if (!weeklyReportData.length) { result.textContent = '매출 데이터를 먼저 업로드하세요'; return; }
+
+  const rows = brand ? weeklyReportData.filter(r => r.brand === brand) : weeklyReportData;
+
+  const naverBrandMap = {};
+  weeklyNaverData.filter(d => d.type !== 'place').forEach(d => {
+    const k = d.brand.toUpperCase();
+    if (!naverBrandMap[k]) naverBrandMap[k] = 0;
+    naverBrandMap[k] += d.cost;
+  });
+
+  const totalRev    = rows.reduce((s, r) => s + r.revenue, 0);
+  const totalAd     = rows.reduce((s, r) => s + (naverBrandMap[r.brand.toUpperCase()] || 0), 0);
+  const totalProfit = rows.reduce((s, r) => s + r.profit, 0);
+  const avgRoas     = totalAd > 0 ? totalRev / totalAd : null;
+  const profitMargin = totalRev > 0 ? totalProfit / totalRev : null;
+
+  if (!budget) {
+    result.innerHTML = avgRoas
+      ? `현재 ROAS <strong>${avgRoas.toFixed(1)}x</strong> · 이익률 <strong>${profitMargin ? (profitMargin*100).toFixed(1) : '-'}%</strong>`
+      : '광고 CSV 업로드 후 ROAS가 표시됩니다';
+    return;
+  }
+
+  if (!avgRoas) { result.textContent = '광고 CSV를 업로드하면 ROAS 기반 예측이 가능합니다'; return; }
+
+  const predictedRevenue = budget * avgRoas;
+  const predictedProfit  = profitMargin ? predictedRevenue * profitMargin : null;
+  result.innerHTML = `예산 <strong>${Math.round(budget/10000)}만원</strong> → 예상 매출 <strong style="color:var(--primary)">${Math.round(predictedRevenue/10000)}만원</strong>${predictedProfit ? ` · 예상 이익 <strong style="color:#1D9E75">${Math.round(predictedProfit/10000)}만원</strong>` : ''} <span style="font-size:11px;color:var(--text-secondary)">(ROAS ${avgRoas.toFixed(1)}x 기준)</span>`;
+}
+
+// ============================================================
+// BRAND HEALTH MODAL
+// ============================================================
+function openBrandHealth(brandName) {
+  const modal = document.getElementById('brand-health-modal');
+  if (!modal) return;
+  const r  = weeklyReportData.find(d => d.brand === brandName);
+  const bd = findBrandEntry(brandName);
+
+  const naverBrandMap = {};
+  weeklyNaverData.filter(d => d.type !== 'place').forEach(d => {
+    const k = d.brand.toUpperCase();
+    if (!naverBrandMap[k]) naverBrandMap[k] = 0;
+    naverBrandMap[k] += d.cost;
+  });
+  const adCost = naverBrandMap[brandName.toUpperCase()] || 0;
+
+  const today = new Date().toISOString().slice(0,10);
+  const nextPromos = calEvents
+    .filter(e => e.type === '프로모션' && e.title.toUpperCase().includes(brandName.split(' ')[0].toUpperCase()) && e.startDate >= today)
+    .sort((a,b) => a.startDate.localeCompare(b.startDate))
+    .slice(0,3);
+
+  document.getElementById('bhm-title').textContent = brandName;
+
+  const typeStyle = { 'PB':'background:#ede9fe;color:#4c1d95','위탁':'background:#d1fae5;color:#064e3b','사입':'background:#fff7ed;color:#7c2d12','부분위탁':'background:#fff7ed;color:#7c2d12' };
+  const type = bd ? (bd.memo || '') : (r ? r.type : '');
+  const ts = typeStyle[type] || 'background:var(--bg-secondary);color:var(--text-secondary)';
+
+  const revenue    = r ? r.revenue : 0;
+  const profit     = r ? r.profit  : 0;
+  const coupon     = r ? r.coupon  : 0;
+  const profitRate = revenue > 0 ? (profit / revenue * 100).toFixed(1) : null;
+  const couponRate = revenue > 0 ? (coupon / revenue * 100).toFixed(1) : null;
+  const roas       = adCost > 0 && revenue > 0 ? (revenue / adCost).toFixed(1) : null;
+
+  document.getElementById('bhm-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem;">
+      <div class="kpi-card" style="padding:10px 14px;">
+        <div class="kpi-label">매출</div>
+        <div class="kpi-value" style="font-size:18px;">${revenue > 0 ? Math.round(revenue/10000) + '만' : '-'}</div>
+        ${revenue > 0 ? `<div class="kpi-sub">${revenue.toLocaleString()}원</div>` : ''}
+      </div>
+      <div class="kpi-card" style="padding:10px 14px;">
+        <div class="kpi-label">이익 ${profitRate ? `(${profitRate}%)` : ''}</div>
+        <div class="kpi-value" style="font-size:18px;color:${profit>0?'#1D9E75':profit<0?'#ef4444':'inherit'}">${profit !== 0 ? Math.round(profit/10000) + '만' : '-'}</div>
+        ${profit !== 0 ? `<div class="kpi-sub">${profit.toLocaleString()}원</div>` : ''}
+      </div>
+      <div class="kpi-card" style="padding:10px 14px;">
+        <div class="kpi-label">광고비 (ROAS${roas ? ' ' + roas + 'x' : ''})</div>
+        <div class="kpi-value" style="font-size:18px;">${adCost > 0 ? Math.round(adCost/10000) + '만' : '-'}</div>
+      </div>
+      <div class="kpi-card" style="padding:10px 14px;">
+        <div class="kpi-label">쿠폰 사용액 ${couponRate ? `(${couponRate}%)` : ''}</div>
+        <div class="kpi-value" style="font-size:18px;${parseFloat(couponRate) >= 20 ? 'color:#d97706' : ''}">${coupon > 0 ? Math.round(coupon/10000) + '만' : '-'}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+      <span style="font-size:12px;color:var(--text-secondary);">구분</span>
+      ${type ? `<span style="${ts};padding:2px 9px;border-radius:4px;font-size:12px;font-weight:600">${type}</span>` : '<span style="color:var(--text-secondary);font-size:12px">미지정</span>'}
+      ${bd ? `<span style="font-size:12px;color:var(--text-secondary);margin-left:8px;">운영: ${bd.status} · ${bd.channel || '-'}</span>` : ''}
+    </div>
+    ${nextPromos.length ? `
+      <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">예정 프로모션</div>
+      ${nextPromos.map(p => `<div style="font-size:12px;padding:5px 8px;background:var(--bg-secondary);border-radius:5px;margin-bottom:4px;">
+        <span style="color:#dc2626;margin-right:6px;">●</span>${p.title} <span style="color:var(--text-secondary)">${p.startDate}${p.endDate && p.endDate !== p.startDate ? '~'+p.endDate : ''}</span>
+        ${p.stage ? `<span style="font-size:10px;padding:1px 6px;background:#ede9fe;color:#4c1d95;border-radius:3px;margin-left:4px;">${p.stage}</span>` : ''}
+      </div>`).join('')}
+    ` : `<div style="font-size:12px;color:var(--text-secondary);">예정된 프로모션 없음</div>`}
+  `;
+  modal.style.display = 'flex';
 }
 </script>
 </body>
