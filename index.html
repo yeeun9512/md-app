@@ -546,6 +546,9 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
       </div>
       <div id="coupon-insight" style="display:none;"></div>
 
+      <!-- Promo Efficiency -->
+      <div id="promo-efficiency" style="display:none;margin-top:1.5rem;"></div>
+
       <!-- Notes -->
       <div id="weekly-notes-wrap" style="display:none;margin-top:1.5rem;"></div>
 
@@ -731,6 +734,12 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
         <option value="기획중">기획중</option>
         <option value="집행중">집행중</option>
         <option value="완료">완료</option>
+      </select>
+    </div>
+    <div class="form-group" id="ev-brand-wrap" style="display:none;">
+      <label>브랜드 <span style="font-size:11px;color:var(--text-secondary);">매출 연동용</span></label>
+      <select id="ev-brand">
+        <option value="">선택 안함</option>
       </select>
     </div>
     <div class="form-group">
@@ -2404,6 +2413,24 @@ function renderCalendar() {
   if (pipelineVisible) renderPipeline();
 }
 
+function populateEvBrandSelect(selected) {
+  const sel = document.getElementById('ev-brand');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">선택 안함</option>';
+  brandData.forEach(b => {
+    const o = document.createElement('option');
+    o.value = b.name;
+    o.textContent = b.name;
+    if (b.name === selected) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function toggleEvBrandField() {
+  const wrap = document.getElementById('ev-brand-wrap');
+  if (wrap) wrap.style.display = document.getElementById('ev-type').value === '프로모션' ? '' : 'none';
+}
+
 function openEventModal(dateStr) {
   editingEventIdx = null;
   document.getElementById('ev-start-date').value = dateStr;
@@ -2415,8 +2442,9 @@ function openEventModal(dateStr) {
   document.getElementById('event-modal-title').textContent = '이벤트 추가';
   const stageEl = document.getElementById('ev-stage');
   if (stageEl) stageEl.value = '기획중';
-  const stageWrap = document.getElementById('ev-stage-wrap');
-  if (stageWrap) stageWrap.style.display = ''; // 프로모션이 기본값이므로 보임
+  document.getElementById('ev-stage-wrap').style.display = '';
+  populateEvBrandSelect('');
+  document.getElementById('ev-brand-wrap').style.display = '';
   document.getElementById('event-modal').style.display = 'flex';
 }
 
@@ -2432,10 +2460,12 @@ function editEvent(e, idx) {
   document.getElementById('ev-content').value = ev.content || '';
   document.getElementById('ev-delete-btn').style.display = 'inline-flex';
   document.getElementById('event-modal-title').textContent = '이벤트 수정';
+  const isPromo = ev.type === '프로모션';
   const stageEl = document.getElementById('ev-stage');
   if (stageEl) stageEl.value = ev.stage || '기획중';
-  const stageWrap = document.getElementById('ev-stage-wrap');
-  if (stageWrap) stageWrap.style.display = ev.type === '프로모션' ? '' : 'none';
+  document.getElementById('ev-stage-wrap').style.display = isPromo ? '' : 'none';
+  populateEvBrandSelect(ev.brand || '');
+  document.getElementById('ev-brand-wrap').style.display = isPromo ? '' : 'none';
   document.getElementById('event-modal').style.display = 'flex';
 }
 
@@ -2450,6 +2480,7 @@ function saveEvent() {
     title: document.getElementById('ev-title').value,
     content: document.getElementById('ev-content').value,
     stage: evType === '프로모션' ? (document.getElementById('ev-stage') ? document.getElementById('ev-stage').value : '기획중') : '',
+    brand: evType === '프로모션' ? (document.getElementById('ev-brand')?.value || '') : '',
   };
   if (!ev.title) { showToast('제목을 입력하세요.'); return; }
   if (!ev.startDate) { showToast('시작일을 입력하세요.'); return; }
@@ -3465,6 +3496,7 @@ function renderWeeklyReport() {
     if (n && saved.notes) n.value = saved.notes;
     if (nn && saved.next)  nn.value = saved.next;
   }
+  renderPromoEfficiency();
 }
 
 function openManualSalesInput() {
@@ -3521,6 +3553,61 @@ function parseManualSalesInput() {
   showToast('✅ ' + data.length + '개 브랜드 데이터 로드 완료');
 }
 
+function renderPromoEfficiency() {
+  const wrap = document.getElementById('promo-efficiency');
+  if (!wrap) return;
+  if (!weeklyReportData.length || !weeklyDateStart || !weeklyDateEnd) { wrap.style.display = 'none'; return; }
+
+  const promos = calEvents.filter(e => {
+    if (e.type !== '프로모션' || !e.brand) return false;
+    const s = e.startDate || '';
+    const d = e.endDate || s;
+    return s <= weeklyDateEnd && d >= weeklyDateStart;
+  });
+
+  if (!promos.length) { wrap.style.display = 'none'; return; }
+
+  const stageColor = { '기획중': '#6366f1', '집행중': '#d97706', '완료': '#16a34a' };
+  const stageBg    = { '기획중': '#ede9fe', '집행중': '#fff7ed', '완료': '#d1fae5' };
+
+  const rows = promos.map(e => {
+    const r = weeklyReportData.find(d => normBrand(d.brand) === normBrand(e.brand));
+    const stage = e.stage || '기획중';
+    const diffRaw = String(r?.prevDiff || '').trim();
+    const diffColor = diffRaw.includes('▲') ? '#1D9E75' : diffRaw.includes('▼') ? '#ef4444' : 'var(--text-secondary)';
+    return `<tr>
+      <td style="font-weight:600;">${e.title}</td>
+      <td style="font-size:11px;color:var(--text-secondary);">${e.startDate}${e.endDate && e.endDate !== e.startDate ? '~' + e.endDate : ''}</td>
+      <td>${e.brand}</td>
+      <td><span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;background:${stageBg[stage]};color:${stageColor[stage]}">${stage}</span></td>
+      <td style="text-align:right;">${r ? r.revenue.toLocaleString() : '-'}</td>
+      <td style="text-align:right;color:#1D9E75;">${r ? r.profit.toLocaleString() : '-'}</td>
+      <td style="text-align:right;color:${diffColor};font-weight:600;">${r ? (diffRaw || '-') : '-'}</td>
+      <td style="text-align:right;">${r && r.coupon > 0 ? r.coupon.toLocaleString() : '-'}</td>
+      <td style="text-align:right;">${r && r.coupon > 0 && r.revenue > 0 ? (r.coupon/r.revenue*100).toFixed(1)+'%' : '-'}</td>
+    </tr>`;
+  }).join('');
+
+  wrap.style.display = 'block';
+  wrap.innerHTML = `
+    <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:10px;">
+      🎯 프로모션 효율 <span style="font-size:11px;font-weight:400;">${weeklyDateStart} ~ ${weeklyDateEnd} 기간 오버랩</span>
+    </div>
+    <div class="table-wrap" style="overflow-x:auto;">
+      <table>
+        <thead><tr>
+          <th>프로모션</th><th>기간</th><th>브랜드</th><th>단계</th>
+          <th style="text-align:right">매출</th>
+          <th style="text-align:right">이익</th>
+          <th style="text-align:right">전주대비</th>
+          <th style="text-align:right">쿠폰사용액</th>
+          <th style="text-align:right">쿠폰비율</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
 function saveWeeklyNotes() {
   const key = 'weeklyNotes_' + (weeklyDateStart || 'default');
   const n  = document.getElementById('weekly-notes');
@@ -3532,8 +3619,11 @@ function saveWeeklyNotes() {
 // PIPELINE
 // ============================================================
 function toggleStageField() {
+  const isPromo = document.getElementById('ev-type').value === '프로모션';
   const wrap = document.getElementById('ev-stage-wrap');
-  if (wrap) wrap.style.display = document.getElementById('ev-type').value === '프로모션' ? '' : 'none';
+  if (wrap) wrap.style.display = isPromo ? '' : 'none';
+  const bwrap = document.getElementById('ev-brand-wrap');
+  if (bwrap) { bwrap.style.display = isPromo ? '' : 'none'; if (isPromo) populateEvBrandSelect(document.getElementById('ev-brand')?.value || ''); }
 }
 
 let pipelineVisible = false;
@@ -3547,7 +3637,33 @@ function togglePipeline() {
   if (pipelineVisible) renderPipeline();
 }
 
+function autoStage(e) {
+  const today = new Date().toISOString().slice(0, 10);
+  const start = e.startDate || '';
+  const end   = e.endDate   || start;
+  if (end < today)        return '완료';
+  if (start <= today)     return '집행중';
+  return '기획중';
+}
+
+function syncPipelineStages() {
+  let changed = false;
+  calEvents.forEach((e, i) => {
+    if (e.type !== '프로모션') return;
+    const auto = autoStage(e);
+    if ((e.stage || '기획중') !== auto) {
+      calEvents[i].stage = auto;
+      changed = true;
+    }
+  });
+  if (changed) {
+    localStorage.setItem('calEvents', JSON.stringify(calEvents));
+    saveSheetData('캘린더', calEvents);
+  }
+}
+
 function renderPipeline() {
+  syncPipelineStages();
   const stages = { '기획중': 'pipe-plan', '집행중': 'pipe-active', '완료': 'pipe-done' };
   const promos = calEvents.filter(e => e.type === '프로모션');
   Object.keys(stages).forEach(stage => {
@@ -3560,9 +3676,26 @@ function renderPipeline() {
       const nextStages = { '기획중': '집행중', '집행중': '완료', '완료': null };
       const nextLabel  = { '기획중': '→ 집행중', '집행중': '→ 완료', '완료': null };
       const cur = e.stage || '기획중';
+
+      // 매출 연동: brand가 있고 weeklyReportData에 매칭되면 표시
+      let salesChip = '';
+      if (e.brand && weeklyReportData.length) {
+        const r = weeklyReportData.find(d => normBrand(d.brand) === normBrand(e.brand));
+        if (r) {
+          const diffRaw = String(r.prevDiff || '').trim();
+          const diffColor = diffRaw.includes('▲') ? '#1D9E75' : diffRaw.includes('▼') ? '#ef4444' : 'var(--text-secondary)';
+          salesChip = `<div style="margin-top:6px;padding:5px 7px;background:var(--bg-secondary);border-radius:4px;font-size:11px;">
+            <span style="color:var(--text-secondary);">매출</span> <strong>${Math.round(r.revenue/10000)}만</strong>
+            <span style="margin-left:6px;color:var(--text-secondary);">이익</span> <strong style="color:#1D9E75">${Math.round(r.profit/10000)}만</strong>
+            ${diffRaw ? `<span style="margin-left:6px;color:${diffColor};font-weight:600;">${diffRaw}</span>` : ''}
+          </div>`;
+        }
+      }
+
       return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;cursor:pointer;" onclick="editEvent(event,${realIdx})">
-        <div style="font-size:12px;font-weight:600;margin-bottom:3px;">${e.title}</div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:3px;">${e.title}${e.brand ? `<span style="font-size:10px;font-weight:400;color:var(--text-secondary);margin-left:5px;">${e.brand}</span>` : ''}</div>
         <div style="font-size:11px;color:var(--text-secondary);">${e.startDate}${e.endDate && e.endDate !== e.startDate ? ' ~ ' + e.endDate : ''}</div>
+        ${salesChip}
         ${nextStages[cur] ? `<button class="btn btn-sm" style="margin-top:6px;font-size:11px;padding:2px 8px;" onclick="advancePipelineStage(event,${realIdx},'${nextStages[cur]}')">${nextLabel[cur]}</button>` : '<div style="font-size:11px;color:#16a34a;margin-top:4px;">✓ 완료</div>'}
       </div>`;
     }).join('');
