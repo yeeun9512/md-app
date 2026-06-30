@@ -425,7 +425,7 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
             <button class="chip" onclick="filterCalendar(this,'광고')"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ca8a04;margin-right:3px;"></span>광고</button>
             <button class="chip" onclick="filterCalendar(this,'기타')"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#6b7280;margin-right:3px;"></span>기타</button>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="togglePipeline()" id="pipeline-toggle-btn">📋 파이프라인</button>
+          <button class="btn btn-primary btn-sm" onclick="togglePipeline()" id="pipeline-toggle-btn">📋 파이프라인</button>
           <button class="btn btn-primary btn-sm" onclick="openEventModal()"><i class="ti ti-plus"></i> 일정 추가</button>
         </div>
       </div>
@@ -456,7 +456,7 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
       <!-- Header row -->
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem;">
         <div>
-          <h2 style="margin:0;font-size:18px;">광고 주간 보고</h2>
+          <h2 style="margin:0;font-size:18px;">매출 현황</h2>
           <div id="weekly-date-label" style="font-size:12px;color:var(--text-secondary);margin-top:2px;"></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -471,7 +471,7 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
       <div id="weekly-kpi" class="kpi-grid" style="display:none;margin-bottom:1.5rem;"></div>
 
       <!-- Channel cards -->
-      <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text-secondary);">광고 채널별 현황</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text-secondary);">마케팅 채널</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:1.5rem;">
         <div class="kpi-card">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
@@ -519,8 +519,8 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
       <!-- ROI Simulator -->
       <div id="roi-sim-wrap" style="display:none;background:var(--bg-secondary);border-radius:10px;padding:14px 16px;margin-bottom:1.5rem;">
         <div style="font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-          💡 광고비 시뮬레이터
-          <span style="font-size:11px;font-weight:400;color:var(--text-secondary);">과거 ROAS 기반 예측</span>
+          📈 ROAS 시뮬레이터
+          <span style="font-size:11px;font-weight:400;color:var(--text-secondary);">광고비 예산 시뮬레이션</span>
         </div>
         <div style="display:grid;grid-template-columns:auto auto auto 1fr;gap:10px;align-items:center;flex-wrap:wrap;">
           <select id="roi-brand" style="border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:13px;background:var(--bg);color:var(--text);" onchange="calcROI()">
@@ -611,8 +611,8 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
         <h2>브랜드 & 쿠폰</h2>
         <div class="tab-header-actions">
           <button class="btn btn-primary btn-sm" onclick="openBrandModal()"><i class="ti ti-plus"></i> 브랜드 추가</button>
-          <button class="btn btn-secondary btn-sm" onclick="reuploadBrand()"><i class="ti ti-upload"></i> 업로드</button>
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('coupon-file-brands').click()"><i class="ti ti-upload"></i> 쿠폰 업로드</button>
+          <button class="btn btn-secondary btn-sm" onclick="reuploadBrand()"><i class="ti ti-upload"></i> 브랜드 XLSX</button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('coupon-file-brands').click()"><i class="ti ti-upload"></i> 쿠폰 XLSX</button>
           <input type="file" id="coupon-file-brands" accept=".xlsx,.xls" style="display:none" onchange="handleCouponFile(event)">
         </div>
       </div>
@@ -3428,6 +3428,7 @@ function renderWeeklyReport() {
       <th style="text-align:right">판매량</th>
       <th style="text-align:right">매출</th>
       <th style="text-align:right">이익</th>
+      <th style="text-align:right">이익률</th>
       <th style="text-align:right">전주대비</th>
       ${hasAd ? '<th style="text-align:right">네이버 광고비</th><th style="text-align:right">ROAS</th>' : ''}
       <th style="text-align:right">쿠폰</th>
@@ -3444,6 +3445,9 @@ function renderWeeklyReport() {
       const couponRatioRaw = r.revenue > 0 ? r.coupon / r.revenue * 100 : 0;
       const couponRatioStr = couponRatioRaw > 0 ? couponRatioRaw.toFixed(1) + '%' : '-';
       const couponRatioStyle = couponRatioRaw >= 30 ? 'color:#dc2626;font-weight:600' : couponRatioRaw >= 20 ? 'color:#d97706;font-weight:600' : '';
+      const marginRaw = r.revenue > 0 ? r.profit / r.revenue * 100 : 0;
+      const marginStr = marginRaw > 0 ? marginRaw.toFixed(1) + '%' : '-';
+      const marginStyle = marginRaw >= 40 ? 'color:#16a34a;font-weight:600' : marginRaw >= 20 ? 'color:var(--text-primary)' : marginRaw > 0 ? 'color:#dc2626' : '';
       return `<tr>
         <td style="color:var(--text-secondary);font-size:12px">${i+1}</td>
         <td style="font-weight:600;cursor:pointer;color:var(--accent)" onclick="openBrandHealth('${r.brand}')">${r.brand}</td>
@@ -3451,6 +3455,7 @@ function renderWeeklyReport() {
         <td style="text-align:right">${r.qty.toLocaleString()}</td>
         <td style="text-align:right">${r.revenue.toLocaleString()}</td>
         <td style="text-align:right">${r.profit.toLocaleString()}</td>
+        <td style="text-align:right;${marginStyle}">${marginStr}</td>
         <td style="text-align:right;color:${diffColor};font-weight:600">${diffStr}</td>
         ${hasAd ? `
           <td style="text-align:right">${r.naverCost > 0 ? r.naverCost.toLocaleString() : '-'}</td>
@@ -3464,6 +3469,7 @@ function renderWeeklyReport() {
       <td style="text-align:right">${totalQty.toLocaleString()}</td>
       <td style="text-align:right">${totalRevenue.toLocaleString()}</td>
       <td style="text-align:right">${totalProfit.toLocaleString()}</td>
+      <td style="text-align:right;color:#16a34a;font-weight:600">${totalRevenue > 0 ? (totalProfit/totalRevenue*100).toFixed(1)+'%' : '-'}</td>
       <td></td>
       ${hasAd ? `<td style="text-align:right">${merged.reduce((s,r)=>s+r.naverCost,0).toLocaleString()}</td><td style="text-align:right;color:#6366f1">${overallRoas ? overallRoas.toFixed(1)+'x' : '-'}</td>` : ''}
       <td style="text-align:right">${totalCoupon.toLocaleString()}</td>
