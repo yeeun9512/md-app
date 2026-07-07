@@ -259,10 +259,7 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
   </div>
   <nav>
     <div class="nav-item active" onclick="switchTab('inventory')" data-tab="inventory">
-      <span class="icon">📦</span> 재고관리
-    </div>
-    <div class="nav-item" onclick="switchTab('products')" data-tab="products">
-      <span class="icon">🛍️</span> 상품관리
+      <span class="icon">🛍️</span> 상품
     </div>
     <div class="nav-item" onclick="switchTab('calendar')" data-tab="calendar">
       <span class="icon">📅</span> 마케팅 캘린더
@@ -285,7 +282,7 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
   <div id="topbar">
     <div style="display:flex;align-items:center;gap:12px;">
       <button id="hamburger" onclick="toggleSidebar()">☰</button>
-      <h2 id="topbar-title">재고관리</h2>
+      <h2 id="topbar-title">상품</h2>
     </div>
     <div id="topbar-right">
       <button class="btn btn-secondary" id="btn-settings" onclick="openSettings()">⚙️ 설정</button>
@@ -293,116 +290,193 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
   </div>
   <div id="content">
 
-    <!-- ===================== 재고관리 ===================== -->
+    <!-- ===================== 상품 (재고관리+상품관리 통합) ===================== -->
     <div class="tab-pane active" id="tab-inventory">
       <div class="tab-header">
-        <h2>재고관리</h2>
+        <h2>상품</h2>
         <div class="tab-header-actions">
-          <button class="btn btn-secondary btn-sm" onclick="reuploadInv()"><i class="ti ti-refresh"></i> 재업로드</button>
+          <div class="toolbar" style="margin:0;gap:6px;">
+            <button class="chip active" data-subview="stock" onclick="setProductSubview('stock')">재고</button>
+            <button class="chip" data-subview="sales" onclick="setProductSubview('sales')">판매</button>
+            <button class="chip" data-subview="combined" onclick="setProductSubview('combined')">통합</button>
+            <button class="chip" data-subview="restock" onclick="setProductSubview('restock')">재입고 알림</button>
+          </div>
         </div>
       </div>
       <div id="hot-items-section" style="display:none;margin-bottom:24px;"></div>
-      <div class="upload-zone" id="inv-upload-zone" onclick="document.getElementById('inv-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'inv-upload-zone')" ondrop="handleDrop(event,'inventory')">
-        <div class="upload-icon">📂</div>
-        <p><strong>통합재고현황.xlsx</strong> 파일을 업로드하세요</p>
-        <p style="font-size:12px;margin-top:6px;">클릭하거나 파일을 드래그하세요</p>
-        <input type="file" id="inv-file" accept=".xlsx,.xls" onchange="handleInvFile(event)">
-      </div>
 
-      <div id="inv-kpi" class="kpi-grid" style="display:none;"></div>
-
-      <div class="toolbar" id="inv-toolbar" style="display:none;">
-        <input class="search-input" id="inv-search" placeholder="스타일, 참고상품명 검색..." oninput="dFilterInventory()">
-        <select id="inv-cat" onchange="filterInventory()" style="display:none;">
-          <option value="">전체 카테고리</option>
-          <option>선글라스</option><option>안경</option><option>AI안경</option>
-        </select>
-        <button class="chip active" onclick="setInvCat(this,'')" data-val="">전체</button><button class="chip" onclick="setInvCat(this,'선글라스')" data-val="선글라스">선글라스</button><button class="chip" onclick="setInvCat(this,'안경')" data-val="안경">안경</button><button class="chip" onclick="setInvCat(this,'AI안경')" data-val="AI안경">AI안경</button>
-        <select id="inv-status" onchange="filterInventory()">
-          <option value="">전체 상태</option>
-          <option>강제품절</option><option>한정</option><option>무제한</option>
-        </select>
-        <select id="inv-brand" onchange="filterInventory()">
-          <option value="">전체 브랜드</option>
-        </select>
-        <div style="flex:1"></div>
-        <span class="page-info" id="inv-count"></span>
-      </div>
-
-      <div id="inv-table-wrap" class="table-wrap" style="display:none;">
-        <table>
-          <thead>
-            <tr>
-              <th onclick="sortTable('inv','sku')" style="cursor:pointer;">스타일 <span id="inv-sort-sku">↕</span></th>
-              <th onclick="sortTable('inv','name')" style="cursor:pointer;">참고상품명 <span id="inv-sort-name">↕</span></th>
-              <th onclick="sortTable('inv','category')" style="cursor:pointer;">카테고리 <span id="inv-sort-category">↕</span></th>
-              <th onclick="sortTable('inv','brand')" style="cursor:pointer;">브랜드 <span id="inv-sort-brand">↕</span></th>
-              <th onclick="sortTable('inv','price')" style="cursor:pointer;">소비자가 <span id="inv-sort-price">↕</span></th>
-              <th onclick="sortTable('inv','status')" style="cursor:pointer;">상태 <span id="inv-sort-status">↕</span></th>
-              <th onclick="sortTable('inv','warehouseQty')" style="cursor:pointer;">창고재고 <span id="inv-sort-warehouseQty">↕</span></th>
-              <th onclick="sortTable('inv','storeQty')" style="cursor:pointer;">매장재고 <span id="inv-sort-storeQty">↕</span></th>
-              <th onclick="sortTable('inv','onlineQty')" style="cursor:pointer;">공용재고 <span id="inv-sort-onlineQty">↕</span></th>
-            </tr>
-          </thead>
-          <tbody id="inv-tbody"></tbody>
-        </table>
-      </div>
-      <div class="pagination" id="inv-pagination"></div>
-    </div>
-
-    <!-- ===================== 상품관리 ===================== -->
-    <div class="tab-pane" id="tab-products">
-      <div class="tab-header">
-        <h2>상품관리</h2>
-        <div class="tab-header-actions">
-          <button class="btn btn-secondary btn-sm" onclick="reuploadProd()"><i class="ti ti-refresh"></i> 재업로드</button>
+      <div id="prodsub-stock">
+        <div class="tab-header" style="margin-bottom:12px;">
+          <h2 style="font-size:14px;color:var(--text-secondary);">재고관리</h2>
+          <div class="tab-header-actions">
+            <button class="btn btn-secondary btn-sm" onclick="reuploadInv()"><i class="ti ti-refresh"></i> 재업로드</button>
+          </div>
         </div>
-      </div>
-      <div class="upload-zone" id="prod-upload-zone" onclick="document.getElementById('prod-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'prod-upload-zone')" ondrop="handleDrop(event,'products')">
-        <div class="upload-icon">📋</div>
-        <p><strong>CMS 상품 CSV / XLSX</strong> 파일을 업로드하세요</p>
-        <p style="font-size:12px;margin-top:6px;">클릭하거나 파일을 드래그하세요</p>
-        <input type="file" id="prod-file" accept=".csv,.xlsx,.xls" onchange="handleProdFile(event)">
+        <div class="upload-zone" id="inv-upload-zone" onclick="document.getElementById('inv-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'inv-upload-zone')" ondrop="handleDrop(event,'inventory')">
+          <div class="upload-icon">📂</div>
+          <p><strong>통합재고현황.xlsx</strong> 파일을 업로드하세요</p>
+          <p style="font-size:12px;margin-top:6px;">클릭하거나 파일을 드래그하세요</p>
+          <input type="file" id="inv-file" accept=".xlsx,.xls" onchange="handleInvFile(event)">
+        </div>
+
+        <div id="inv-kpi" class="kpi-grid" style="display:none;"></div>
+
+        <div class="toolbar" id="inv-toolbar" style="display:none;">
+          <input class="search-input" id="inv-search" placeholder="스타일, 참고상품명 검색..." oninput="dFilterInventory()">
+          <select id="inv-cat" onchange="filterInventory()" style="display:none;">
+            <option value="">전체 카테고리</option>
+            <option>선글라스</option><option>안경</option><option>AI안경</option>
+          </select>
+          <button class="chip active" onclick="setInvCat(this,'')" data-val="">전체</button><button class="chip" onclick="setInvCat(this,'선글라스')" data-val="선글라스">선글라스</button><button class="chip" onclick="setInvCat(this,'안경')" data-val="안경">안경</button><button class="chip" onclick="setInvCat(this,'AI안경')" data-val="AI안경">AI안경</button>
+          <select id="inv-status" onchange="filterInventory()">
+            <option value="">전체 상태</option>
+            <option>강제품절</option><option>한정</option><option>무제한</option>
+          </select>
+          <select id="inv-brand" onchange="filterInventory()">
+            <option value="">전체 브랜드</option>
+          </select>
+          <div style="flex:1"></div>
+          <span class="page-info" id="inv-count"></span>
+        </div>
+
+        <div id="inv-table-wrap" class="table-wrap" style="display:none;">
+          <table>
+            <thead>
+              <tr>
+                <th onclick="sortTable('inv','sku')" style="cursor:pointer;">스타일 <span id="inv-sort-sku">↕</span></th>
+                <th onclick="sortTable('inv','name')" style="cursor:pointer;">참고상품명 <span id="inv-sort-name">↕</span></th>
+                <th onclick="sortTable('inv','category')" style="cursor:pointer;">카테고리 <span id="inv-sort-category">↕</span></th>
+                <th onclick="sortTable('inv','brand')" style="cursor:pointer;">브랜드 <span id="inv-sort-brand">↕</span></th>
+                <th onclick="sortTable('inv','price')" style="cursor:pointer;">소비자가 <span id="inv-sort-price">↕</span></th>
+                <th onclick="sortTable('inv','status')" style="cursor:pointer;">상태 <span id="inv-sort-status">↕</span></th>
+                <th onclick="sortTable('inv','warehouseQty')" style="cursor:pointer;">창고재고 <span id="inv-sort-warehouseQty">↕</span></th>
+                <th onclick="sortTable('inv','storeQty')" style="cursor:pointer;">매장재고 <span id="inv-sort-storeQty">↕</span></th>
+                <th onclick="sortTable('inv','onlineQty')" style="cursor:pointer;">공용재고 <span id="inv-sort-onlineQty">↕</span></th>
+              </tr>
+            </thead>
+            <tbody id="inv-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="inv-pagination"></div>
       </div>
 
-      <div id="prod-kpi" class="kpi-grid" style="display:none;"></div>
+      <div id="prodsub-sales" style="display:none;">
+        <div class="tab-header" style="margin-bottom:12px;">
+          <h2 style="font-size:14px;color:var(--text-secondary);">상품관리</h2>
+          <div class="tab-header-actions">
+            <button class="btn btn-secondary btn-sm" onclick="reuploadProd()"><i class="ti ti-refresh"></i> 재업로드</button>
+          </div>
+        </div>
+        <div class="upload-zone" id="prod-upload-zone" onclick="document.getElementById('prod-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'prod-upload-zone')" ondrop="handleDrop(event,'products')">
+          <div class="upload-icon">📋</div>
+          <p><strong>CMS 상품 CSV / XLSX</strong> 파일을 업로드하세요</p>
+          <p style="font-size:12px;margin-top:6px;">클릭하거나 파일을 드래그하세요</p>
+          <input type="file" id="prod-file" accept=".csv,.xlsx,.xls" onchange="handleProdFile(event)">
+        </div>
 
-      <div class="toolbar" id="prod-toolbar" style="display:none;">
-        <input class="search-input" id="prod-search" placeholder="상품코드, 상품명 검색..." oninput="dFilterProducts()">
-        <select id="prod-cat" onchange="filterProducts()" style="display:none;">
-          <option value="">전체 카테고리</option>
-          <option>선글라스</option><option>안경</option><option>AI안경</option>
-        </select>
-        <button class="chip active" onclick="setProdCat(this,'')" data-val="">전체</button><button class="chip" onclick="setProdCat(this,'선글라스')" data-val="선글라스">선글라스</button><button class="chip" onclick="setProdCat(this,'안경')" data-val="안경">안경</button><button class="chip" onclick="setProdCat(this,'AI안경')" data-val="AI안경">AI안경</button>
-        <select id="prod-status" onchange="filterProducts()" style="display:none;">
-          <option value="">전체 상태</option>
-          <option>판매중</option><option>숨김</option><option>품절</option>
-        </select>
-        <button class="chip active" onclick="setProdStatus(this,'')" data-sval="">전체</button><button class="chip" onclick="setProdStatus(this,'판매중')" data-sval="판매중">판매중</button><button class="chip" onclick="setProdStatus(this,'숨김')" data-sval="숨김">숨김</button><button class="chip" onclick="setProdStatus(this,'품절')" data-sval="품절">품절</button>
-        <div style="flex:1"></div>
-        <span class="page-info" id="prod-count"></span>
+        <div id="prod-kpi" class="kpi-grid" style="display:none;"></div>
+
+        <div class="toolbar" id="prod-toolbar" style="display:none;">
+          <input class="search-input" id="prod-search" placeholder="상품코드, 상품명 검색..." oninput="dFilterProducts()">
+          <select id="prod-cat" onchange="filterProducts()" style="display:none;">
+            <option value="">전체 카테고리</option>
+            <option>선글라스</option><option>안경</option><option>AI안경</option>
+          </select>
+          <button class="chip active" onclick="setProdCat(this,'')" data-val="">전체</button><button class="chip" onclick="setProdCat(this,'선글라스')" data-val="선글라스">선글라스</button><button class="chip" onclick="setProdCat(this,'안경')" data-val="안경">안경</button><button class="chip" onclick="setProdCat(this,'AI안경')" data-val="AI안경">AI안경</button>
+          <select id="prod-status" onchange="filterProducts()" style="display:none;">
+            <option value="">전체 상태</option>
+            <option>판매중</option><option>숨김</option><option>품절</option>
+          </select>
+          <button class="chip active" onclick="setProdStatus(this,'')" data-sval="">전체</button><button class="chip" onclick="setProdStatus(this,'판매중')" data-sval="판매중">판매중</button><button class="chip" onclick="setProdStatus(this,'숨김')" data-sval="숨김">숨김</button><button class="chip" onclick="setProdStatus(this,'품절')" data-sval="품절">품절</button>
+          <div style="flex:1"></div>
+          <span class="page-info" id="prod-count"></span>
+        </div>
+
+        <div id="prod-table-wrap" class="table-wrap" style="display:none;">
+          <table>
+            <thead>
+              <tr>
+                <th onclick="sortTable('prod','code')" style="cursor:pointer;">상품코드 <span id="prod-sort-code">↕</span></th>
+                <th onclick="sortTable('prod','refName')" style="cursor:pointer;">참고상품명 <span id="prod-sort-refName">↕</span></th>
+                <th>상품명(full)</th>
+                <th onclick="sortTable('prod','category')" style="cursor:pointer;">카테고리 <span id="prod-sort-category">↕</span></th>
+                <th onclick="sortTable('prod','brand')" style="cursor:pointer;">브랜드 <span id="prod-sort-brand">↕</span></th>
+                <th onclick="sortTable('prod','price')" style="cursor:pointer;">판매가 <span id="prod-sort-price">↕</span></th>
+                <th onclick="sortTable('prod','status')" style="cursor:pointer;">상태 <span id="prod-sort-status">↕</span></th>
+                <th onclick="sortTable('prod','views')" style="cursor:pointer;">조회수 <span id="prod-sort-views">↕</span></th>
+                <th onclick="sortTable('prod','orders')" style="cursor:pointer;">주문수 <span id="prod-sort-orders">↕</span></th>
+                <th onclick="sortTable('prod','sales')" style="cursor:pointer;">판매수 <span id="prod-sort-sales">↕</span></th>
+              </tr>
+            </thead>
+            <tbody id="prod-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="prod-pagination"></div>
       </div>
 
-      <div id="prod-table-wrap" class="table-wrap" style="display:none;">
-        <table>
-          <thead>
-            <tr>
-              <th onclick="sortTable('prod','code')" style="cursor:pointer;">상품코드 <span id="prod-sort-code">↕</span></th>
-              <th onclick="sortTable('prod','refName')" style="cursor:pointer;">참고상품명 <span id="prod-sort-refName">↕</span></th>
-              <th>상품명(full)</th>
-              <th onclick="sortTable('prod','category')" style="cursor:pointer;">카테고리 <span id="prod-sort-category">↕</span></th>
-              <th onclick="sortTable('prod','brand')" style="cursor:pointer;">브랜드 <span id="prod-sort-brand">↕</span></th>
-              <th onclick="sortTable('prod','price')" style="cursor:pointer;">판매가 <span id="prod-sort-price">↕</span></th>
-              <th onclick="sortTable('prod','status')" style="cursor:pointer;">상태 <span id="prod-sort-status">↕</span></th>
-              <th onclick="sortTable('prod','views')" style="cursor:pointer;">조회수 <span id="prod-sort-views">↕</span></th>
-              <th onclick="sortTable('prod','orders')" style="cursor:pointer;">주문수 <span id="prod-sort-orders">↕</span></th>
-              <th onclick="sortTable('prod','sales')" style="cursor:pointer;">판매수 <span id="prod-sort-sales">↕</span></th>
-            </tr>
-          </thead>
-          <tbody id="prod-tbody"></tbody>
-        </table>
+      <div id="prodsub-combined" style="display:none;">
+        <div class="tab-header" style="margin-bottom:12px;">
+          <h2 style="font-size:14px;color:var(--text-secondary);">재고 + 판매 통합 (상품코드 기준 조인)</h2>
+        </div>
+        <div class="toolbar" id="combo-toolbar">
+          <input class="search-input" id="combo-search" placeholder="상품코드, 상품명 검색..." oninput="dFilterCombo()">
+          <div style="flex:1"></div>
+          <span class="page-info" id="combo-count"></span>
+        </div>
+        <div id="combo-table-wrap" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>코드</th><th>상품명</th><th>카테고리</th><th>브랜드</th><th>판매가</th><th>상태</th>
+                <th>창고재고</th><th>매장재고</th><th>공용재고</th><th>조회수</th><th>주문수</th><th>판매수</th>
+              </tr>
+            </thead>
+            <tbody id="combo-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="combo-pagination"></div>
       </div>
-      <div class="pagination" id="prod-pagination"></div>
+
+      <div id="prodsub-restock" style="display:none;">
+        <div class="tab-header" style="margin-bottom:12px;">
+          <h2 style="font-size:14px;color:var(--text-secondary);">재입고 알림 요청</h2>
+          <div class="tab-header-actions">
+            <button class="btn btn-secondary btn-sm" onclick="reuploadRestock()"><i class="ti ti-refresh"></i> 재업로드</button>
+          </div>
+        </div>
+        <div class="upload-zone" id="restock-upload-zone" onclick="document.getElementById('restock-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'restock-upload-zone')" ondrop="handleDrop(event,'restock')">
+          <div class="upload-icon">🔔</div>
+          <p><strong>CMS 재입고 알림 리스트</strong> 파일을 업로드하세요</p>
+          <p style="font-size:12px;margin-top:6px;">클릭하거나 파일을 드래그하세요 (자사몰 관리 사이트에서 다운로드)</p>
+          <input type="file" id="restock-file" accept=".xls,.xlsx,.csv" onchange="handleRestockFile(event)">
+        </div>
+
+        <div id="restock-kpi" class="kpi-grid" style="display:none;"></div>
+
+        <div class="toolbar" id="restock-toolbar" style="display:none;">
+          <input class="search-input" id="restock-search" placeholder="상품명, 브랜드 검색..." oninput="dFilterRestock()">
+          <div style="flex:1"></div>
+          <span class="page-info" id="restock-count"></span>
+        </div>
+
+        <div id="restock-table-wrap" class="table-wrap" style="display:none;">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:50px;">순위</th>
+                <th onclick="sortTable('restock','refName')" style="cursor:pointer;">참고상품명 <span id="restock-sort-refName">↕</span></th>
+                <th onclick="sortTable('restock','model')" style="cursor:pointer;">상품모델 <span id="restock-sort-model">↕</span></th>
+                <th onclick="sortTable('restock','brand')" style="cursor:pointer;">브랜드 <span id="restock-sort-brand">↕</span></th>
+                <th onclick="sortTable('restock','status')" style="cursor:pointer;">상태 <span id="restock-sort-status">↕</span></th>
+                <th onclick="sortTable('restock','count')" style="cursor:pointer;">요청건수 <span id="restock-sort-count">↕</span></th>
+                <th onclick="sortTable('restock','latest')" style="cursor:pointer;">최근 요청일 <span id="restock-sort-latest">↕</span></th>
+              </tr>
+            </thead>
+            <tbody id="restock-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="restock-pagination"></div>
+      </div>
     </div>
 
     <!-- ===================== 마케팅 캘린더 ===================== -->
@@ -432,7 +506,7 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
       <div class="card">
         <div class="calendar-grid" id="cal-grid"></div>
       </div>
-      <div id="promo-pipeline" style="display:none;margin-top:1.5rem;">
+      <div id="promo-pipeline" style="display:block;margin-top:1.5rem;">
         <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:10px;">프로모션 파이프라인 <span style="font-size:11px;font-weight:400;">— 클릭해서 단계 변경</span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
           <div>
@@ -465,6 +539,15 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
           <input type="date" id="weekly-date-end" style="border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:13px;">
           <button class="btn btn-primary btn-sm" onclick="applyWeeklyDates()">조회</button>
         </div>
+      </div>
+
+      <!-- Goal (OKR) card -->
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+          <div style="font-size:13px;font-weight:600;color:var(--text-secondary);">🎯 목표 (OKR)</div>
+          <button class="btn btn-secondary btn-sm" onclick="openGoalModal()"><i class="ti ti-edit"></i> 목표 설정</button>
+        </div>
+        <div id="goal-progress-body" style="font-size:13px;color:var(--text-secondary);">목표를 설정해주세요.</div>
       </div>
 
       <!-- KPI cards -->
@@ -546,6 +629,27 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
       </div>
       <div id="coupon-insight" style="display:none;"></div>
 
+      <!-- Store (franchise) sales -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;margin-top:1.5rem;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text-secondary);">매장별 매출 (라운즈 가맹점) <span id="store-sales-badge" style="display:none;font-size:11px;background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:5px;font-weight:400;margin-left:6px;"></span></div>
+        <button class="btn btn-sm" onclick="document.getElementById('store-sales-file').click()"><i class="ti ti-upload"></i> 가맹점 매출 엑셀</button>
+        <input type="file" id="store-sales-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleStoreSalesFile(event)">
+      </div>
+      <div id="store-sales-kpi" class="kpi-grid" style="display:none;margin-bottom:12px;"></div>
+      <div id="store-sales-table-wrap" class="table-wrap" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortTable('store','name')" style="cursor:pointer;">매장명 <span id="store-sort-name">↕</span></th>
+              <th onclick="sortTable('store','revenue')" style="cursor:pointer;">매출액 <span id="store-sort-revenue">↕</span></th>
+              <th onclick="sortTable('store','qty')" style="cursor:pointer;">판매수량 <span id="store-sort-qty">↕</span></th>
+              <th onclick="sortTable('store','avgPrice')" style="cursor:pointer;">객단가 <span id="store-sort-avgPrice">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="store-sales-tbody"></tbody>
+        </table>
+      </div>
+
       <!-- Promo Efficiency -->
       <div id="promo-efficiency" style="display:none;margin-top:1.5rem;"></div>
 
@@ -600,6 +704,34 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
           <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
             <button class="btn btn-sm" onclick="closeEtcInput()">취소</button>
             <button class="btn btn-primary btn-sm" onclick="saveEtcInput()">저장</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="goal-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:var(--bg);border-radius:12px;padding:24px;width:380px;max-width:95vw;border:1px solid var(--border);">
+          <div style="font-size:15px;font-weight:600;margin-bottom:16px;">목표 설정</div>
+          <div style="display:grid;gap:12px;">
+            <div><label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">목표 이름</label><input type="text" id="goal-label" placeholder="예: 2026년 하반기 매출 목표" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--bg);color:var(--text);"></div>
+            <div style="border-top:1px solid var(--border);padding-top:10px;">
+              <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">🖥️ 온라인</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">목표 매출 (원)</label><input type="number" id="goal-online-target" placeholder="예: 350000000" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--bg);color:var(--text);"></div>
+                <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">실적 (원, 수동)</label><input type="number" id="goal-online-actual" placeholder="예: 220000000" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--bg);color:var(--text);"></div>
+              </div>
+            </div>
+            <div style="border-top:1px solid var(--border);padding-top:10px;">
+              <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">🏬 오프라인</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">목표 매출 (원)</label><input type="number" id="goal-offline-target" placeholder="예: 150000000" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--bg);color:var(--text);"></div>
+                <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">실적 (원, 수동)</label><input type="number" id="goal-offline-actual" placeholder="예: 100000000" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--bg);color:var(--text);"></div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text-secondary);">매출 현황 데이터를 업로드하면 브랜드 채널(온라인/오프라인) 기준으로 실적이 자동 반영돼요. 없으면 위 수동 입력값을 사용합니다.</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
+            <button class="btn btn-sm" onclick="closeGoalModal()">취소</button>
+            <button class="btn btn-primary btn-sm" onclick="saveGoal()">저장</button>
           </div>
         </div>
       </div>
@@ -692,15 +824,23 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
         <div class="card" style="overflow:visible;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
             <span style="font-size:13px;font-weight:600;color:var(--text-secondary);">업무 메모</span>
+            <button id="memo-lock-btn" class="btn btn-sm" style="display:none;background:var(--bg-secondary);color:var(--text-secondary);" onclick="lockMemo()">🔒 잠그기</button>
           </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;" id="memo-cat-tabs">
-            <button class="memo-cat-btn active" onclick="filterMemos('')" data-cat="">전체</button>
-            <button class="memo-cat-btn" onclick="filterMemos('업무')" data-cat="업무">💼 업무</button>
-            <button class="memo-cat-btn" onclick="filterMemos('아이디어')" data-cat="아이디어">💡 아이디어</button>
-            <button class="memo-cat-btn" onclick="filterMemos('공지')" data-cat="공지">📢 공지</button>
-            <button class="memo-cat-btn" onclick="filterMemos('기타')" data-cat="기타">📎 기타</button>
+          <div id="memo-locked-view" style="text-align:center;padding:50px 10px;color:var(--text-secondary);">
+            <div style="font-size:28px;margin-bottom:8px;">🔒</div>
+            <p style="font-size:13px;margin-bottom:12px;">메모는 잠겨 있습니다. 다른 사람과 화면을 공유할 때 안전해요.</p>
+            <button class="btn btn-primary btn-sm" onclick="openMemoLockPrompt()">잠금 해제</button>
           </div>
-          <div id="memo-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-height:480px;overflow-y:auto;"></div>
+          <div id="memo-content" style="display:none;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;" id="memo-cat-tabs">
+              <button class="memo-cat-btn active" onclick="filterMemos('')" data-cat="">전체</button>
+              <button class="memo-cat-btn" onclick="filterMemos('업무')" data-cat="업무">💼 업무</button>
+              <button class="memo-cat-btn" onclick="filterMemos('아이디어')" data-cat="아이디어">💡 아이디어</button>
+              <button class="memo-cat-btn" onclick="filterMemos('공지')" data-cat="공지">📢 공지</button>
+              <button class="memo-cat-btn" onclick="filterMemos('기타')" data-cat="기타">📎 기타</button>
+            </div>
+            <div id="memo-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-height:480px;overflow-y:auto;"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1019,6 +1159,11 @@ let editingEventIdx = null;
 let todosData = JSON.parse(localStorage.getItem('todosData') || '[]');
 let notesData = localStorage.getItem('notesData') || '';
 let memosData = JSON.parse(localStorage.getItem('memosData') || '[]');
+
+// 브랜드/쿠폰 캐시 (localStorage로 즉시 렌더)
+let brandData  = JSON.parse(localStorage.getItem('brandData')  || '[]');
+let couponData = JSON.parse(localStorage.getItem('couponData') || '[]');
+let goalData = JSON.parse(localStorage.getItem('goalData') || 'null');
 let memoColorSelected = '#fef9c3';
 let memoCatFilter = '';
 
@@ -1063,6 +1208,16 @@ function init() {
   initCalendar();
   initTodos();
   renderMemos();
+  renderMemoLockState();
+  renderGoalCard();
+
+  // 캐시된 브랜드/쿠폰이 있으면 즉시 렌더 (Sheets 응답 전에 표시)
+  if (brandData.length || couponData.length) {
+    showBrandUI();
+    renderBrandKPI();
+    filterBrands();
+    document.getElementById('brand-upload-zone').style.display = 'none';
+  }
 
   // Load from GSheet if URL set
   if (SCRIPT_URL) {
@@ -1175,6 +1330,7 @@ function init() {
         category: r.category || r['카테고리'] || '',
         memo: r.memo || r['메모'] || r['구분'] || '',
       }));
+      localStorage.setItem('brandData', JSON.stringify(brandData));
       showBrandUI();
       renderBrandKPI();
       filterBrands();
@@ -1188,9 +1344,14 @@ function init() {
 // ============================================================
 async function loadSheetData(sheet) {
   if (!SCRIPT_URL) return null;
-  const res = await fetch(`${SCRIPT_URL}?action=getData&sheet=${encodeURIComponent(sheet)}`);
-  const json = await res.json();
-  return json.data || json;
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=getData&sheet=${encodeURIComponent(sheet)}`, { signal: ctrl.signal });
+    clearTimeout(tid);
+    const json = await res.json();
+    return json.data || json;
+  } catch(e) { return null; }
 }
 async function saveSheetData(sheet, data) {
   if (!SCRIPT_URL) return;
@@ -1206,18 +1367,23 @@ async function saveSheetData(sheet, data) {
 // ============================================================
 // NAVIGATION
 // ============================================================
-const tabTitles = { inventory:'재고관리', products:'상품관리', calendar:'마케팅 캘린더', coupons:'브랜드 & 쿠폰', weekly:'매출 현황', brands:'브랜드 & 쿠폰', todos:'할 일 / 업무 메모' };
+const tabTitles = { inventory:'상품', calendar:'마케팅 캘린더', coupons:'브랜드 & 쿠폰', weekly:'매출 현황', brands:'브랜드 & 쿠폰', todos:'할 일 / 업무 메모' };
 const TODO_PW = '0001'; // 비밀번호 변경 시 여기 수정
 let todoUnlocked = false;
-let pendingTab = null;
+let memoUnlocked = false;
+let pendingAction = null;
+
+function openPasswordPrompt(action) {
+  pendingAction = action;
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-error').style.display = 'none';
+  document.getElementById('pw-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('pw-input').focus(), 50);
+}
 
 function switchTab(tab) {
   if (tab === 'todos' && !todoUnlocked) {
-    pendingTab = tab;
-    document.getElementById('pw-input').value = '';
-    document.getElementById('pw-error').style.display = 'none';
-    document.getElementById('pw-modal').style.display = 'flex';
-    setTimeout(() => document.getElementById('pw-input').focus(), 50);
+    openPasswordPrompt({ kind: 'tab', value: tab });
     return;
   }
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -1229,13 +1395,32 @@ function switchTab(tab) {
   if (tab === 'calendar') renderCalendar();
 }
 
+let productSubview = 'stock';
+function setProductSubview(view) {
+  productSubview = view;
+  ['stock', 'sales', 'combined', 'restock'].forEach(v => {
+    const el = document.getElementById('prodsub-' + v);
+    if (el) el.style.display = (v === view) ? 'block' : 'none';
+  });
+  document.querySelectorAll('#tab-inventory > .tab-header > .tab-header-actions .chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.subview === view);
+  });
+  if (view === 'combined') filterCombo();
+}
+
 function confirmPassword() {
   const val = document.getElementById('pw-input').value;
   if (val === TODO_PW) {
-    todoUnlocked = true;
     closeModal('pw-modal');
-    switchTab(pendingTab);
-    pendingTab = null;
+    const action = pendingAction;
+    pendingAction = null;
+    if (action?.kind === 'memo') {
+      memoUnlocked = true;
+      renderMemoLockState();
+    } else if (action?.kind === 'tab') {
+      todoUnlocked = true;
+      switchTab(action.value);
+    }
   } else {
     document.getElementById('pw-error').style.display = 'block';
     document.getElementById('pw-input').value = '';
@@ -1265,6 +1450,7 @@ function handleDrop(e, type) {
   else if (type === 'products') processProdFile(file);
   else if (type === 'coupons') processCouponFile(file);
   else if (type === 'brands') processBrandFile(file);
+  else if (type === 'restock') processRestockFile(file);
   e.currentTarget.classList.remove('drag');
 }
 
@@ -1406,7 +1592,7 @@ function populateInvBrandFilter() {
 // ============================================================
 // BRAND MANAGEMENT
 // ============================================================
-let brandData = [];
+
 let brandFiltered = [];
 let brandPage = 1;
 const BRAND_PER_PAGE = 50;
@@ -1965,7 +2151,7 @@ function renderHotItems() {
 // ============================================================
 // SORT
 // ============================================================
-const sortState = { inv: { key: '', dir: 1 }, prod: { key: '', dir: 1 } };
+const sortState = { inv: { key: '', dir: 1 }, prod: { key: '', dir: 1 }, restock: { key: 'count', dir: -1 }, store: { key: 'revenue', dir: -1 } };
 const hotSortState = {
   soldOut:     { key: '', dir: 1 },
   lowStock:    { key: '', dir: 1 },
@@ -2003,6 +2189,8 @@ function sortTable(type, key) {
 
   if (type === 'inv') { invPage = 1; renderInvTable(); }
   else if (type === 'prod') { prodPage = 1; renderProdTable(); }
+  else if (type === 'restock') { restockPage = 1; renderRestockTable(); }
+  else if (type === 'store') { renderStoreSalesTable(); }
 
 }
 
@@ -2017,6 +2205,24 @@ function applySortInv(arr) {
 
 function applySortProd(arr) {
   const { key, dir } = sortState.prod;
+  if (!key) return arr;
+  return [...arr].sort((a, b) => {
+    const av = a[key] ?? ''; const bv = b[key] ?? '';
+    return typeof av === 'number' ? (av - bv) * dir : String(av).localeCompare(String(bv), 'ko') * dir;
+  });
+}
+
+function applySortStore(arr) {
+  const { key, dir } = sortState.store;
+  if (!key) return arr;
+  return [...arr].sort((a, b) => {
+    const av = a[key] ?? ''; const bv = b[key] ?? '';
+    return typeof av === 'number' ? (av - bv) * dir : String(av).localeCompare(String(bv), 'ko') * dir;
+  });
+}
+
+function applySortRestock(arr) {
+  const { key, dir } = sortState.restock;
   if (!key) return arr;
   return [...arr].sort((a, b) => {
     const av = a[key] ?? ''; const bv = b[key] ?? '';
@@ -2327,6 +2533,195 @@ function renderProdTable() {
 }
 
 // ============================================================
+// COMBINED VIEW (재고 + 판매, 상품코드 기준 조인)
+// ============================================================
+let comboFiltered = [];
+let comboPage = 1;
+const COMBO_PER_PAGE = 100;
+
+function normalizeCode(s) { return String(s || '').toLowerCase().replace(/[\s\-_\[\]()]/g, ''); }
+
+function buildComboData() {
+  const map = new Map();
+  invData.forEach(inv => {
+    map.set(normalizeCode(inv.sku), {
+      code: inv.sku, name: inv.name, category: inv.category, brand: inv.brand, price: inv.price, status: inv.status,
+      warehouseQty: inv.warehouseQty, storeQty: inv.storeQty, onlineQty: inv.onlineQty, views: 0, orders: 0, sales: 0
+    });
+  });
+  prodData.forEach(p => {
+    const key = normalizeCode(p.code);
+    const existing = map.get(key);
+    if (existing) {
+      existing.views = p.views; existing.orders = p.orders; existing.sales = p.sales;
+      if (!existing.name) existing.name = p.refName || p.name;
+      if (!existing.price) existing.price = p.price;
+      if (!existing.category) existing.category = p.category;
+      if (!existing.brand) existing.brand = p.brand;
+    } else {
+      map.set(key, {
+        code: p.code, name: p.refName || p.name, category: p.category, brand: p.brand, price: p.price, status: p.status,
+        warehouseQty: 0, storeQty: 0, onlineQty: 0, views: p.views, orders: p.orders, sales: p.sales
+      });
+    }
+  });
+  return [...map.values()];
+}
+
+function filterCombo() {
+  const q = document.getElementById('combo-search').value.toLowerCase();
+  const data = buildComboData();
+  comboFiltered = q ? data.filter(r => String(r.code || '').toLowerCase().includes(q) || String(r.name || '').toLowerCase().includes(q)) : data;
+  comboPage = 1;
+  renderComboTable();
+}
+const dFilterCombo = debounce(() => filterCombo(), 300);
+
+function renderComboTable() {
+  const start = (comboPage - 1) * COMBO_PER_PAGE;
+  const pageData = comboFiltered.slice(start, start + COMBO_PER_PAGE);
+  document.getElementById('combo-count').textContent = `총 ${comboFiltered.length.toLocaleString()}건`;
+
+  document.getElementById('combo-tbody').innerHTML = pageData.map(r => `<tr>
+      <td style="font-family:monospace;font-size:12px;">${r.code || '-'}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name || '-'}</td>
+      <td>${r.category || '-'}</td>
+      <td>${r.brand || '-'}</td>
+      <td>${r.price ? Number(r.price).toLocaleString() + '원' : '-'}</td>
+      <td>${r.status || '-'}</td>
+      <td>${(r.warehouseQty || 0).toLocaleString()}</td>
+      <td>${(r.storeQty || 0).toLocaleString()}</td>
+      <td>${(r.onlineQty || 0).toLocaleString()}</td>
+      <td>${(r.views || 0).toLocaleString()}</td>
+      <td>${(r.orders || 0).toLocaleString()}</td>
+      <td>${(r.sales || 0).toLocaleString()}</td>
+    </tr>`).join('');
+
+  renderPagination('combo', comboFiltered.length, COMBO_PER_PAGE, comboPage);
+}
+
+// ============================================================
+// RESTOCK ALERT REQUESTS (재입고 알림 요청)
+// ============================================================
+let restockRaw = [];       // 요청 1건당 1행 (원본)
+let restockData = [];      // 참고상품명 기준 집계
+let restockFiltered = [];
+let restockPage = 1;
+const RESTOCK_PER_PAGE = 100;
+
+function handleRestockFile(e) { processRestockFile(e.target.files[0]); }
+
+function processRestockFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (rawRows.length < 2) { showToast('데이터가 없습니다.'); return; }
+      parseRestockRows(rawRows[0].map(String), rawRows.slice(1));
+    } catch (err) { console.error(err); showToast('파일 파싱 오류: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseRestockRows(headerRow, dataRows) {
+  const hi = {};
+  headerRow.forEach((h, i) => { if (h) hi[h.trim()] = i; });
+  function col(row, name) {
+    const idx = hi[name];
+    return idx !== undefined ? String(row[idx] ?? '').trim() : '';
+  }
+
+  restockRaw = dataRows.map(row => ({
+    refName: col(row, '참고상품명') || col(row, '상품이름'),
+    model: col(row, '상품모델'),
+    brand: col(row, '상품브랜드'),
+    status: col(row, '상품상태'),
+    registeredAt: Number(col(row, '신청등록날짜')) || 0,
+  })).filter(r => r.refName);
+
+  const map = new Map();
+  restockRaw.forEach(r => {
+    const key = r.refName;
+    if (!map.has(key)) map.set(key, { refName: r.refName, model: r.model, brand: r.brand, status: r.status, count: 0, latest: 0 });
+    const g = map.get(key);
+    g.count++;
+    if (r.registeredAt > g.latest) { g.latest = r.registeredAt; g.status = r.status; g.model = r.model; g.brand = r.brand; }
+  });
+  restockData = [...map.values()];
+
+  if (!restockData.length) { showToast('데이터가 없습니다.'); return; }
+
+  document.getElementById('restock-upload-zone').style.display = 'none';
+  restockFiltered = restockData;
+  restockPage = 1;
+  document.getElementById('restock-toolbar').style.display = 'flex';
+  document.getElementById('restock-table-wrap').style.display = 'block';
+  renderRestockKPI();
+  renderRestockTable();
+  showToast(`🔔 재입고 알림 요청 ${restockRaw.length.toLocaleString()}건 (${restockData.length.toLocaleString()}개 상품) 불러옴`);
+}
+
+function renderRestockKPI() {
+  const totalRequests = restockRaw.length;
+  const totalProducts = restockData.length;
+  const topCount = restockData.reduce((m, r) => Math.max(m, r.count), 0);
+  const soldoutHot = restockData.filter(r => r.status === '품절' && r.count >= 3).length;
+
+  const kpi = document.getElementById('restock-kpi');
+  kpi.style.display = 'grid';
+  kpi.innerHTML = `
+    <div class="kpi-card kpi-accent"><div class="kpi-label">전체 요청건수</div><div class="kpi-value">${totalRequests.toLocaleString()}</div></div>
+    <div class="kpi-card"><div class="kpi-label">요청 상품 수</div><div class="kpi-value">${totalProducts.toLocaleString()}</div></div>
+    <div class="kpi-card kpi-orange"><div class="kpi-label">최다 요청건수</div><div class="kpi-value">${topCount.toLocaleString()}</div></div>
+    <div class="kpi-card kpi-red"><div class="kpi-label">품절 + 요청 3건 이상</div><div class="kpi-value">${soldoutHot.toLocaleString()}</div></div>
+  `;
+}
+
+function filterRestock() {
+  const q = document.getElementById('restock-search').value.toLowerCase();
+  restockFiltered = q ? restockData.filter(r => String(r.refName || '').toLowerCase().includes(q) || String(r.brand || '').toLowerCase().includes(q)) : restockData;
+  restockPage = 1;
+  renderRestockTable();
+}
+const dFilterRestock = debounce(() => filterRestock(), 300);
+
+function renderRestockTable() {
+  const sorted = applySortRestock(restockFiltered);
+  const start = (restockPage - 1) * RESTOCK_PER_PAGE;
+  const pageData = sorted.slice(start, start + RESTOCK_PER_PAGE);
+  document.getElementById('restock-count').textContent = `총 ${restockFiltered.length.toLocaleString()}개 상품`;
+
+  document.getElementById('restock-tbody').innerHTML = pageData.map((r, i) => {
+    const statusBadge = r.status === '품절' ? 'badge-red' : r.status === '숨김' ? 'badge-gray' : 'badge-green';
+    const dateStr = r.latest ? new Date(r.latest * 1000).toISOString().slice(0, 10).replace(/-/g, '.') : '-';
+    return `<tr>
+      <td>${start + i + 1}</td>
+      <td>${r.refName || '-'}</td>
+      <td style="font-family:monospace;font-size:12px;">${r.model || '-'}</td>
+      <td>${r.brand || '-'}</td>
+      <td><span class="badge ${statusBadge}">${r.status || '-'}</span></td>
+      <td style="font-weight:600;">${r.count.toLocaleString()}</td>
+      <td>${dateStr}</td>
+    </tr>`;
+  }).join('');
+
+  renderPagination('restock', restockFiltered.length, RESTOCK_PER_PAGE, restockPage);
+}
+
+function reuploadRestock() {
+  restockRaw = []; restockData = []; restockFiltered = [];
+  document.getElementById('restock-upload-zone').style.display = 'block';
+  document.getElementById('restock-toolbar').style.display = 'none';
+  document.getElementById('restock-table-wrap').style.display = 'none';
+  document.getElementById('restock-kpi').style.display = 'none';
+  document.getElementById('restock-pagination').innerHTML = '';
+  document.getElementById('restock-file').value = '';
+}
+
+// ============================================================
 // PAGINATION
 // ============================================================
 function renderPagination(prefix, total, perPage, current) {
@@ -2359,6 +2754,16 @@ function goPage(prefix, page) {
     if (page < 1 || page > totalPages) return;
     prodPage = page;
     renderProdTable();
+  } else if (prefix === 'combo') {
+    const totalPages = Math.ceil(comboFiltered.length / COMBO_PER_PAGE);
+    if (page < 1 || page > totalPages) return;
+    comboPage = page;
+    renderComboTable();
+  } else if (prefix === 'restock') {
+    const totalPages = Math.ceil(restockFiltered.length / RESTOCK_PER_PAGE);
+    if (page < 1 || page > totalPages) return;
+    restockPage = page;
+    renderRestockTable();
   }
   window.scrollTo(0, 0);
 }
@@ -2724,6 +3129,17 @@ function filterMemos(cat) {
   renderMemos();
 }
 
+function openMemoLockPrompt() { openPasswordPrompt({ kind: 'memo' }); }
+function lockMemo() { memoUnlocked = false; renderMemoLockState(); }
+function renderMemoLockState() {
+  const locked = document.getElementById('memo-locked-view');
+  const content = document.getElementById('memo-content');
+  const lockBtn = document.getElementById('memo-lock-btn');
+  if (locked) locked.style.display = memoUnlocked ? 'none' : 'block';
+  if (content) content.style.display = memoUnlocked ? 'block' : 'none';
+  if (lockBtn) lockBtn.style.display = memoUnlocked ? 'inline-flex' : 'none';
+}
+
 function renderMemos() {
   const grid = document.getElementById('memo-grid');
   if (!grid) return;
@@ -2806,7 +3222,6 @@ function findBrandEntry(brandName) {
   );
 }
 
-let couponData = [];
 let couponPage = 1;
 const COUPON_PAGE_SIZE = 50;
 
@@ -3050,6 +3465,7 @@ async function loadCouponFromSheets() {
       }
     }).filter(d => d.brand);
     if (couponData.length) {
+      localStorage.setItem('couponData', JSON.stringify(couponData));
       couponPage=1;
       showBrandUI();
       document.getElementById('brand-upload-zone').style.display = 'none';
@@ -3065,6 +3481,90 @@ async function loadCouponFromSheets() {
 window.addEventListener('DOMContentLoaded', () => {
   init();
 });
+
+// ============================================================
+// GOAL (OKR)
+// ============================================================
+// 구버전 goalData({label,target,manualActual}) 호환 마이그레이션
+if (goalData && goalData.target !== undefined && !goalData.online) {
+  goalData = { label: goalData.label, online: { target: goalData.target, manualActual: goalData.manualActual || 0 }, offline: { target: 0, manualActual: 0 } };
+  localStorage.setItem('goalData', JSON.stringify(goalData));
+}
+
+function openGoalModal() {
+  document.getElementById('goal-label').value = goalData?.label || '';
+  document.getElementById('goal-online-target').value = goalData?.online?.target || '';
+  document.getElementById('goal-online-actual').value = goalData?.online?.manualActual || '';
+  document.getElementById('goal-offline-target').value = goalData?.offline?.target || '';
+  document.getElementById('goal-offline-actual').value = goalData?.offline?.manualActual || '';
+  document.getElementById('goal-modal').style.display = 'flex';
+}
+function closeGoalModal() { document.getElementById('goal-modal').style.display = 'none'; }
+
+function saveGoal() {
+  const label = document.getElementById('goal-label').value.trim();
+  const onlineTarget = Number(document.getElementById('goal-online-target').value) || 0;
+  const onlineActual = Number(document.getElementById('goal-online-actual').value) || 0;
+  const offlineTarget = Number(document.getElementById('goal-offline-target').value) || 0;
+  const offlineActual = Number(document.getElementById('goal-offline-actual').value) || 0;
+  if (!label || (!onlineTarget && !offlineTarget)) { showToast('목표 이름과 목표 매출을 입력하세요.'); return; }
+  goalData = {
+    label,
+    online:  { target: onlineTarget,  manualActual: onlineActual },
+    offline: { target: offlineTarget, manualActual: offlineActual },
+  };
+  localStorage.setItem('goalData', JSON.stringify(goalData));
+  closeGoalModal();
+  renderGoalCard();
+  showToast('목표가 저장되었습니다.');
+}
+
+// 브랜드 채널(온라인/오프라인전용) 기준으로 매출 현황 데이터를 자동 분리
+function isOfflineChannel(brandName) {
+  const b = (typeof findBrandEntry === 'function') ? findBrandEntry(brandName) : null;
+  const ch = (b?.channel || '').toLowerCase();
+  return ch.includes('오프라인') || ch === 'only off' || ch === '-';
+}
+
+function computeAutoChannelRevenue() {
+  if (typeof weeklyReportData === 'undefined' || !weeklyReportData.length) return null;
+  let online = 0, offline = 0;
+  weeklyReportData.forEach(r => {
+    if (isOfflineChannel(r.brand)) offline += r.revenue;
+    else online += r.revenue;
+  });
+  return { online, offline };
+}
+
+function renderGoalProgress(icon, label, target, actual, isAuto) {
+  const pct = target ? Math.min(100, Math.round(actual / target * 100)) : 0;
+  return `
+    <div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+        <span style="font-size:12px;font-weight:600;color:var(--text-secondary);">${icon} ${label}</span>
+        <span style="font-size:12px;">${(actual/10000).toLocaleString()}만 / ${(target/10000).toLocaleString()}만 (${pct}%)</span>
+      </div>
+      <div style="height:8px;border-radius:4px;background:var(--bg-secondary);overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent)'};border-radius:4px;transition:width .3s;"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">${isAuto ? '매출 현황 데이터 기준 자동 집계' : '수동 입력 실적 기준'}</div>
+    </div>
+  `;
+}
+
+function renderGoalCard() {
+  const body = document.getElementById('goal-progress-body');
+  if (!body) return;
+  if (!goalData) { body.innerHTML = '목표를 설정해주세요.'; return; }
+  const auto = computeAutoChannelRevenue();
+  const onlineActual  = auto ? auto.online  : (goalData.online?.manualActual  || 0);
+  const offlineActual = auto ? auto.offline : (goalData.offline?.manualActual || 0);
+
+  let html = `<div style="font-weight:600;color:var(--text-primary);margin-bottom:10px;">${goalData.label}</div>`;
+  if (goalData.online?.target) html += renderGoalProgress('🖥️', '온라인', goalData.online.target, onlineActual, !!auto);
+  if (goalData.offline?.target) html += renderGoalProgress('🏬', '오프라인', goalData.offline.target, offlineActual, !!auto);
+  body.innerHTML = html;
+}
 
 // ============================================================
 // ============================================================
@@ -3142,6 +3642,94 @@ function parseWeeklyReport(rows, fileName) {
   if (badge) { badge.textContent = (fileName || '업로드됨') + ' · ' + data.length + '개 브랜드'; badge.style.display = ''; }
   renderWeeklyReport();
   showToast('✅ 매출 현황 ' + data.length + '개 브랜드 로드');
+}
+
+// ============================================================
+// STORE (가맹점) SALES — 라운즈 가맹점만 집계, 글라스박스 등 타 브랜드 가맹점은 제외
+// ============================================================
+let storeSalesData = [];
+
+function handleStoreSalesFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  showToast('가맹점 매출 파일 파싱 중...');
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      parseStoreSales(rows);
+    } catch (err) { showToast('파싱 오류: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = '';
+}
+
+function parseStoreSales(rows) {
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    if (rows[i].some(c => String(c).includes('가맹점'))) { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) { showToast('가맹점 컬럼을 찾을 수 없습니다.'); return; }
+
+  const header = rows[headerIdx].map(c => String(c).trim());
+  const hi = {};
+  header.forEach((h, i) => { if (h) hi[h] = i; });
+  const get = (row, name) => { const idx = hi[name]; return idx !== undefined ? row[idx] : ''; };
+
+  const map = new Map();
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    const store = String(get(row, '가맹점') || '').trim();
+    if (!store.startsWith('라운즈')) continue; // 라운즈 가맹점만 (글라스박스 등 제외)
+    const amount = Number(get(row, '판매금액')) || 0;
+    const qty = Number(get(row, '수량')) || 0;
+    if (!map.has(store)) map.set(store, { name: store, revenue: 0, qty: 0 });
+    const g = map.get(store);
+    g.revenue += amount;
+    g.qty += qty;
+  }
+  storeSalesData = [...map.values()].map(s => ({ ...s, avgPrice: s.qty ? Math.round(s.revenue / s.qty) : 0 }));
+
+  if (!storeSalesData.length) { showToast('라운즈 가맹점 데이터를 찾을 수 없습니다.'); return; }
+
+  const badge = document.getElementById('store-sales-badge');
+  if (badge) { badge.textContent = `라운즈 ${storeSalesData.length}개 매장`; badge.style.display = 'inline-block'; }
+  document.getElementById('store-sales-kpi').style.display = 'grid';
+  document.getElementById('store-sales-table-wrap').style.display = 'block';
+  renderStoreSalesKPI();
+  renderStoreSalesTable();
+  showToast(`🏪 라운즈 가맹점 ${storeSalesData.length}개 매출 집계 완료`);
+}
+
+function renderStoreSalesKPI() {
+  const totalRevenue = storeSalesData.reduce((s, r) => s + r.revenue, 0);
+  const totalQty = storeSalesData.reduce((s, r) => s + r.qty, 0);
+  const top = [...storeSalesData].sort((a, b) => b.revenue - a.revenue)[0];
+  const kpi = document.getElementById('store-sales-kpi');
+  kpi.innerHTML = `
+    <div class="kpi-card kpi-accent"><div class="kpi-label">라운즈 매장 수</div><div class="kpi-value">${storeSalesData.length.toLocaleString()}</div></div>
+    <div class="kpi-card kpi-green"><div class="kpi-label">총 매출</div><div class="kpi-value">${Math.round(totalRevenue/10000).toLocaleString()}만</div><div class="kpi-sub">${totalRevenue.toLocaleString()}원</div></div>
+    <div class="kpi-card"><div class="kpi-label">총 판매수량</div><div class="kpi-value">${totalQty.toLocaleString()}</div></div>
+    <div class="kpi-card kpi-orange"><div class="kpi-label">1위 매장</div><div class="kpi-value" style="font-size:14px;">${top ? top.name.replace('라운즈 ', '') : '-'}</div></div>
+  `;
+}
+
+function renderStoreSalesTable() {
+  document.querySelectorAll('[id^="store-sort-"]').forEach(el => {
+    const key = el.id.replace('store-sort-', '');
+    el.textContent = sortState.store.key === key ? (sortState.store.dir === 1 ? '↑' : '↓') : '↕';
+  });
+  const sorted = applySortStore(storeSalesData);
+  document.getElementById('store-sales-tbody').innerHTML = sorted.map(r => `
+    <tr>
+      <td>${r.name}</td>
+      <td>${r.revenue.toLocaleString()}원</td>
+      <td>${r.qty.toLocaleString()}</td>
+      <td>${r.avgPrice.toLocaleString()}원</td>
+    </tr>
+  `).join('');
 }
 
 function handleNaverAdFile(e) {
@@ -3352,6 +3940,7 @@ function renderWeeklyChannelBars(channels) {
 
 // ── 메인 렌더 ──────────────────────────────────────────────
 function renderWeeklyReport() {
+  renderGoalCard();
   const naverSearchCost = weeklyNaverData.filter(d => d.type === 'search').reduce((s, d) => s + d.cost, 0);
   const naverBrandCost  = weeklyNaverData.filter(d => d.type === 'brand').reduce((s, d) => s + d.cost, 0);
   const kakaoCost       = weeklyKakaoData.cost || 0;
@@ -3676,7 +4265,7 @@ function toggleStageField() {
   if (bwrap) { bwrap.style.display = isPromo ? '' : 'none'; if (isPromo) populateEvBrandSelect(document.getElementById('ev-brand')?.value || ''); }
 }
 
-let pipelineVisible = false;
+let pipelineVisible = true;
 function togglePipeline() {
   pipelineVisible = !pipelineVisible;
   const el = document.getElementById('promo-pipeline');
