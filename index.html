@@ -635,6 +635,7 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
         <button class="btn btn-sm" onclick="document.getElementById('store-sales-file').click()"><i class="ti ti-upload"></i> 가맹점 매출 엑셀</button>
         <input type="file" id="store-sales-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleStoreSalesFile(event)">
       </div>
+      <div id="store-month-filter" class="toolbar" style="margin-bottom:10px;"></div>
       <div id="store-sales-kpi" class="kpi-grid" style="display:none;margin-bottom:12px;"></div>
       <div id="store-sales-table-wrap" class="table-wrap" style="display:none;">
         <table>
@@ -1209,6 +1210,7 @@ function init() {
   initTodos();
   renderMemos();
   renderMemoLockState();
+  if (storeSalesDaily.length) { renderStoreMonthFilter(); applyStoreMonthFilter(); }
   renderGoalCard();
 
   // 캐시된 브랜드/쿠폰이 있으면 즉시 렌더 (Sheets 응답 전에 표시)
@@ -3527,12 +3529,20 @@ function isOfflineChannel(brandName) {
 }
 
 function computeAutoChannelRevenue() {
-  if (typeof weeklyReportData === 'undefined' || !weeklyReportData.length) return null;
-  let online = 0, offline = 0;
-  weeklyReportData.forEach(r => {
-    if (isOfflineChannel(r.brand)) offline += r.revenue;
-    else online += r.revenue;
-  });
+  const hasWeekly = typeof weeklyReportData !== 'undefined' && weeklyReportData.length > 0;
+  const hasStore  = typeof storeSalesData   !== 'undefined' && storeSalesData.length   > 0;
+  if (!hasWeekly && !hasStore) return { online: null, offline: null };
+
+  let online = null, offline = null;
+  if (hasWeekly) {
+    online = 0;
+    weeklyReportData.forEach(r => { if (!isOfflineChannel(r.brand)) online += r.revenue; });
+    offline = 0;
+    weeklyReportData.forEach(r => { if (isOfflineChannel(r.brand)) offline += r.revenue; });
+  }
+  // 가맹점 매출(매장별 실제 오프라인 판매) 데이터가 있으면 이 값을 오프라인 실적으로 우선 사용
+  if (hasStore) offline = storeSalesData.reduce((s, r) => s + r.revenue, 0);
+
   return { online, offline };
 }
 
@@ -3542,7 +3552,7 @@ function renderGoalProgress(icon, label, target, actual, isAuto) {
     <div style="margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
         <span style="font-size:12px;font-weight:600;color:var(--text-secondary);">${icon} ${label}</span>
-        <span style="font-size:12px;">${(actual/10000).toLocaleString()}만 / ${(target/10000).toLocaleString()}만 (${pct}%)</span>
+        <span style="font-size:12px;">${Math.round(actual/10000).toLocaleString()}만 / ${Math.round(target/10000).toLocaleString()}만 (${pct}%)</span>
       </div>
       <div style="height:8px;border-radius:4px;background:var(--bg-secondary);overflow:hidden;">
         <div style="height:100%;width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent)'};border-radius:4px;transition:width .3s;"></div>
@@ -3557,12 +3567,14 @@ function renderGoalCard() {
   if (!body) return;
   if (!goalData) { body.innerHTML = '목표를 설정해주세요.'; return; }
   const auto = computeAutoChannelRevenue();
-  const onlineActual  = auto ? auto.online  : (goalData.online?.manualActual  || 0);
-  const offlineActual = auto ? auto.offline : (goalData.offline?.manualActual || 0);
+  const onlineIsAuto  = auto.online  != null;
+  const offlineIsAuto = auto.offline != null;
+  const onlineActual  = onlineIsAuto  ? auto.online  : (goalData.online?.manualActual  || 0);
+  const offlineActual = offlineIsAuto ? auto.offline : (goalData.offline?.manualActual || 0);
 
   let html = `<div style="font-weight:600;color:var(--text-primary);margin-bottom:10px;">${goalData.label}</div>`;
-  if (goalData.online?.target) html += renderGoalProgress('🖥️', '온라인', goalData.online.target, onlineActual, !!auto);
-  if (goalData.offline?.target) html += renderGoalProgress('🏬', '오프라인', goalData.offline.target, offlineActual, !!auto);
+  if (goalData.online?.target) html += renderGoalProgress('🖥️', '온라인', goalData.online.target, onlineActual, onlineIsAuto);
+  if (goalData.offline?.target) html += renderGoalProgress('🏬', '오프라인', goalData.offline.target, offlineActual, offlineIsAuto);
   body.innerHTML = html;
 }
 
@@ -3646,8 +3658,11 @@ function parseWeeklyReport(rows, fileName) {
 
 // ============================================================
 // STORE (가맹점) SALES — 라운즈 가맹점만 집계, 글라스박스 등 타 브랜드 가맹점은 제외
+// 업로드할 때마다 (날짜,매장) 단위로 누적 저장 → 월별로 쌓아서 볼 수 있음
 // ============================================================
-let storeSalesData = [];
+let storeSalesDaily = JSON.parse(localStorage.getItem('storeSalesDaily') || '[]'); // [{date, store, revenue, qty}]
+let storeSalesMonthFilter = ''; // '' = 전체 누적, 아니면 'YYYY-MM'
+let storeSalesData = []; // 선택된 기간 기준으로 매장별 집계된 결과 (테이블에 표시)
 
 function handleStoreSalesFile(e) {
   const file = e.target.files[0];
@@ -3678,29 +3693,70 @@ function parseStoreSales(rows) {
   header.forEach((h, i) => { if (h) hi[h] = i; });
   const get = (row, name) => { const idx = hi[name]; return idx !== undefined ? row[idx] : ''; };
 
-  const map = new Map();
+  // 1) 이번 파일을 (판매일자, 매장) 단위로 집계
+  const dailyMap = new Map();
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const row = rows[i];
     const store = String(get(row, '가맹점') || '').trim();
     if (!store.startsWith('라운즈')) continue; // 라운즈 가맹점만 (글라스박스 등 제외)
+    const date = String(get(row, '판매일자') || '').trim();
+    if (!date) continue;
     const amount = Number(get(row, '판매금액')) || 0;
     const qty = Number(get(row, '수량')) || 0;
-    if (!map.has(store)) map.set(store, { name: store, revenue: 0, qty: 0 });
-    const g = map.get(store);
+    const key = date + '|' + store;
+    if (!dailyMap.has(key)) dailyMap.set(key, { date, store, revenue: 0, qty: 0 });
+    const g = dailyMap.get(key);
     g.revenue += amount;
     g.qty += qty;
   }
+  const newDaily = [...dailyMap.values()];
+  if (!newDaily.length) { showToast('라운즈 가맹점 데이터를 찾을 수 없습니다.'); return; }
+
+  // 2) 같은 (날짜,매장) 기존 데이터는 이번 업로드로 교체 → 재업로드해도 중복 집계 안 됨
+  const newKeys = new Set(newDaily.map(d => d.date + '|' + d.store));
+  storeSalesDaily = storeSalesDaily.filter(d => !newKeys.has(d.date + '|' + d.store)).concat(newDaily);
+  localStorage.setItem('storeSalesDaily', JSON.stringify(storeSalesDaily));
+
+  renderStoreMonthFilter();
+  applyStoreMonthFilter();
+  renderGoalCard();
+  showToast(`🏪 라운즈 가맹점 매출 업데이트 완료 (${newDaily.length}건의 매장·일자 반영, 누적 ${storeSalesDaily.length}건)`);
+}
+
+function renderStoreMonthFilter() {
+  const wrap = document.getElementById('store-month-filter');
+  if (!wrap) return;
+  const months = [...new Set(storeSalesDaily.map(d => d.date.slice(0, 7)))].sort().reverse();
+  if (!months.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<button class="chip ${storeSalesMonthFilter===''?'active':''}" onclick="setStoreMonthFilter('')">전체</button>` +
+    months.map(m => `<button class="chip ${storeSalesMonthFilter===m?'active':''}" onclick="setStoreMonthFilter('${m}')">${m}</button>`).join('');
+}
+
+function setStoreMonthFilter(m) {
+  storeSalesMonthFilter = m;
+  renderStoreMonthFilter();
+  applyStoreMonthFilter();
+  renderGoalCard();
+}
+
+function applyStoreMonthFilter() {
+  const rows = storeSalesMonthFilter ? storeSalesDaily.filter(d => d.date.slice(0, 7) === storeSalesMonthFilter) : storeSalesDaily;
+  const map = new Map();
+  rows.forEach(d => {
+    if (!map.has(d.store)) map.set(d.store, { name: d.store, revenue: 0, qty: 0 });
+    const g = map.get(d.store);
+    g.revenue += d.revenue;
+    g.qty += d.qty;
+  });
   storeSalesData = [...map.values()].map(s => ({ ...s, avgPrice: s.qty ? Math.round(s.revenue / s.qty) : 0 }));
 
-  if (!storeSalesData.length) { showToast('라운즈 가맹점 데이터를 찾을 수 없습니다.'); return; }
-
   const badge = document.getElementById('store-sales-badge');
-  if (badge) { badge.textContent = `라운즈 ${storeSalesData.length}개 매장`; badge.style.display = 'inline-block'; }
-  document.getElementById('store-sales-kpi').style.display = 'grid';
-  document.getElementById('store-sales-table-wrap').style.display = 'block';
+  const hasData = storeSalesData.length > 0;
+  if (badge) { badge.textContent = `라운즈 ${storeSalesData.length}개 매장`; badge.style.display = hasData ? 'inline-block' : 'none'; }
+  document.getElementById('store-sales-kpi').style.display = hasData ? 'grid' : 'none';
+  document.getElementById('store-sales-table-wrap').style.display = hasData ? 'block' : 'none';
   renderStoreSalesKPI();
   renderStoreSalesTable();
-  showToast(`🏪 라운즈 가맹점 ${storeSalesData.length}개 매출 집계 완료`);
 }
 
 function renderStoreSalesKPI() {
