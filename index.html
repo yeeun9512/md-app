@@ -289,6 +289,9 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
     <div class="nav-item" onclick="switchTab('style')" data-tab="style">
       <span class="icon">👓</span> 스타일 분석
     </div>
+    <div class="nav-item" onclick="switchTab('imgcrop')" data-tab="imgcrop">
+      <span class="icon">🖼️</span> 이미지 크롭
+    </div>
     <div class="nav-item" onclick="switchTab('todos')" data-tab="todos">
       <span class="icon">✅</span> 할 일 / 메모
     </div>
@@ -875,7 +878,14 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
           <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;">제품 이미지 분석</div>
           <div class="form-group">
             <label>제품 이미지 URL</label>
-            <input type="text" id="style-image-url" placeholder="https://..." oninput="previewStyleImage()">
+            <input type="text" id="style-image-url" placeholder="https://..." oninput="handleStyleUrlInput()">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin:-6px 0 12px;color:var(--text-secondary);font-size:11px;">
+            <div style="flex:1;height:1px;background:var(--border);"></div>또는<div style="flex:1;height:1px;background:var(--border);"></div>
+          </div>
+          <div class="form-group">
+            <label>내 컴퓨터에서 이미지 업로드</label>
+            <input type="file" id="style-image-file" accept="image/*" onchange="handleStyleFileUpload(event)">
           </div>
           <div id="style-preview-wrap"><span>이미지 미리보기</span></div>
           <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="analyzeStyleImage()" id="style-analyze-btn">
@@ -915,6 +925,21 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
         </div>
         <div id="style-grid"></div>
       </div>
+    </div>
+
+    <!-- ===================== 이미지 크롭 ===================== -->
+    <div class="tab-pane" id="tab-imgcrop">
+      <div class="tab-header">
+        <h2>이미지 크롭</h2>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;">이미지를 업로드하면 가운데를 기준으로 860×860 정사각형으로 자동 크롭됩니다. 여러 장을 한 번에 올릴 수 있어요.</p>
+      <div class="upload-zone" id="imgcrop-upload-zone" onclick="document.getElementById('imgcrop-file').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event,'imgcrop-upload-zone')" ondrop="handleImgCropDrop(event)">
+        <div class="upload-icon">🖼️</div>
+        <p><strong>이미지 파일</strong>을 업로드하세요</p>
+        <p style="font-size:12px;margin-top:6px;">클릭하거나 파일을 드래그하세요 (여러 장 가능)</p>
+        <input type="file" id="imgcrop-file" accept="image/*" multiple onchange="handleImgCropFile(event)">
+      </div>
+      <div id="imgcrop-grid" class="style-result-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));"></div>
     </div>
 
     <div class="tab-pane" id="tab-todos">
@@ -1317,6 +1342,7 @@ let notesData = localStorage.getItem('notesData') || '';
 let memosData = JSON.parse(localStorage.getItem('memosData') || '[]');
 let styleData = JSON.parse(localStorage.getItem('styleAnalysisData') || '[]');
 let styleCurrentResult = null;
+let styleLocalImage = null; // { dataUrl, base64, mimeType } — set when analyzing a locally-uploaded file instead of a URL
 
 // 브랜드/쿠폰 캐시 (localStorage로 즉시 렌더)
 let brandData  = JSON.parse(localStorage.getItem('brandData')  || '[]');
@@ -1582,7 +1608,7 @@ async function saveSheetData(sheet, data) {
 // ============================================================
 // NAVIGATION
 // ============================================================
-const tabTitles = { inventory:'상품', calendar:'마케팅 캘린더', coupons:'브랜드 & 쿠폰', weekly:'매출 현황', brands:'브랜드 & 쿠폰', style:'스타일 분석', todos:'할 일 / 업무 메모' };
+const tabTitles = { inventory:'상품', calendar:'마케팅 캘린더', coupons:'브랜드 & 쿠폰', weekly:'매출 현황', brands:'브랜드 & 쿠폰', style:'스타일 분석', imgcrop:'이미지 크롭', todos:'할 일 / 업무 메모' };
 const TODO_PW = '0001'; // 비밀번호 변경 시 여기 수정
 let todoUnlocked = false;
 let memoUnlocked = false;
@@ -1667,6 +1693,73 @@ function handleDrop(e, type) {
   else if (type === 'brands') processBrandFile(file);
   else if (type === 'restock') processRestockFile(file);
   e.currentTarget.classList.remove('drag');
+}
+
+// ============================================================
+// IMAGE CROP (860x860 center crop)
+// ============================================================
+const IMGCROP_SIZE = 860;
+let imgCropResults = [];
+
+function handleImgCropDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag');
+  processImgCropFiles(e.dataTransfer.files);
+}
+function handleImgCropFile(e) {
+  processImgCropFiles(e.target.files);
+  e.target.value = '';
+}
+function processImgCropFiles(fileList) {
+  const files = Array.from(fileList || []).filter(f => f.type.startsWith('image/'));
+  if (!files.length) { showToast('이미지 파일을 선택해주세요.'); return; }
+  files.forEach(cropImageFileTo860);
+}
+function cropImageFileTo860(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2;
+      const sy = (img.height - side) / 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = IMGCROP_SIZE;
+      canvas.height = IMGCROP_SIZE;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, IMGCROP_SIZE, IMGCROP_SIZE);
+      const isPng = /png$/i.test(file.type);
+      const mime = isPng ? 'image/png' : 'image/jpeg';
+      const dataUrl = canvas.toDataURL(mime, 0.92);
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+      const ext = isPng ? 'png' : 'jpg';
+      imgCropResults.unshift({ name: `${baseName}_860x860.${ext}`, dataUrl });
+      renderImgCropGrid();
+    };
+    img.onerror = function() { showToast(`⚠️ "${file.name}" 이미지를 불러올 수 없습니다.`); };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function renderImgCropGrid() {
+  const grid = document.getElementById('imgcrop-grid');
+  grid.innerHTML = imgCropResults.map((r, i) => `
+    <div class="style-card">
+      <img src="${r.dataUrl}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:var(--radius);margin-bottom:8px;">
+      <div style="font-size:12px;color:var(--text-secondary);word-break:break-all;margin-bottom:8px;">${r.name}</div>
+      <button class="btn btn-secondary btn-sm" onclick="downloadImgCrop(${i})"><i class="ti ti-download"></i> 다운로드</button>
+    </div>
+  `).join('');
+}
+function downloadImgCrop(i) {
+  const r = imgCropResults[i];
+  if (!r) return;
+  const a = document.createElement('a');
+  a.href = r.dataUrl;
+  a.download = r.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 // ============================================================
@@ -3430,6 +3523,12 @@ function saveMemosToSheets() {
 // ============================================================
 // STYLE ANALYSIS
 // ============================================================
+function handleStyleUrlInput() {
+  styleLocalImage = null;
+  document.getElementById('style-image-file').value = '';
+  previewStyleImage();
+}
+
 function previewStyleImage() {
   const url = document.getElementById('style-image-url').value.trim();
   const wrap = document.getElementById('style-preview-wrap');
@@ -3437,9 +3536,51 @@ function previewStyleImage() {
   wrap.innerHTML = `<img src="${url}" onerror="this.parentElement.innerHTML='<span>이미지를 불러올 수 없습니다</span>'">`;
 }
 
+function handleStyleFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('style-image-url').value = '';
+  resizeImageFile(file, 600, 0.75).then(({ dataUrl, base64, mimeType }) => {
+    styleLocalImage = { dataUrl, base64, mimeType };
+    document.getElementById('style-preview-wrap').innerHTML = `<img src="${dataUrl}">`;
+  }).catch(() => showToast('이미지를 불러올 수 없습니다.'));
+}
+
+// 파일을 캔버스로 리사이즈 + JPEG 압축. Google Sheets 셀 용량(약 5만자)을 넘지 않도록
+// 결과가 크면 품질을 낮춰가며 재시도한다.
+function resizeImageFile(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width >= height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        let q = quality;
+        let dataUrl = canvas.toDataURL('image/jpeg', q);
+        while (dataUrl.length > 60000 && q > 0.3) {
+          q -= 0.15;
+          dataUrl = canvas.toDataURL('image/jpeg', q);
+        }
+        resolve({ dataUrl, base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' });
+      };
+      img.onerror = () => reject(new Error('image load failed'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('file read failed'));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function analyzeStyleImage() {
   const url = document.getElementById('style-image-url').value.trim();
-  if (!url) { showToast('이미지 URL을 입력하세요.'); return; }
+  if (!url && !styleLocalImage) { showToast('이미지 URL을 입력하거나 파일을 업로드하세요.'); return; }
   if (!SCRIPT_URL) { showToast('설정에서 Apps Script URL을 먼저 등록하세요.'); return; }
 
   const btn = document.getElementById('style-analyze-btn');
@@ -3448,10 +3589,13 @@ async function analyzeStyleImage() {
   document.getElementById('style-result-card').style.display = 'none';
 
   try {
+    const payload = styleLocalImage
+      ? { action: 'analyzeStyle', imageBase64: styleLocalImage.base64, mimeType: styleLocalImage.mimeType }
+      : { action: 'analyzeStyle', imageUrl: url };
     const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'analyzeStyle', imageUrl: url })
+      body: JSON.stringify(payload)
     });
     const json = await res.json();
     const err = json.error || (json.result && json.result.error);
@@ -3460,7 +3604,7 @@ async function analyzeStyleImage() {
     const style = json.result && json.result.style;
     if (!style) { showToast('분석 결과를 받지 못했습니다.'); return; }
 
-    styleCurrentResult = { imageUrl: url, ...style };
+    styleCurrentResult = { imageUrl: styleLocalImage ? styleLocalImage.dataUrl : url, ...style };
     document.getElementById('style-res-material').value = style.frameMaterial || '';
     document.getElementById('style-res-shape').value = style.frameShape || '';
     document.getElementById('style-res-style').value = style.frameStyle || '';
@@ -3492,8 +3636,10 @@ function saveStyleEntry() {
   renderStyleGrid();
   document.getElementById('style-result-card').style.display = 'none';
   document.getElementById('style-image-url').value = '';
+  document.getElementById('style-image-file').value = '';
   document.getElementById('style-preview-wrap').innerHTML = '<span>이미지 미리보기</span>';
   styleCurrentResult = null;
+  styleLocalImage = null;
   showToast('분석 기록에 저장했습니다.');
 }
 
