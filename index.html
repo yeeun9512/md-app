@@ -186,6 +186,22 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
 .memo-color-btn { padding: 4px 10px; border-radius: var(--radius); font-size: 12px; cursor: pointer; border: 2px solid transparent; transition: border .12s; }
 .memo-color-btn.selected { border-color: var(--accent); }
 
+/* ── Style Analysis ── */
+#style-preview-wrap { width: 100%; aspect-ratio: 1/1; max-width: 220px; border-radius: var(--radius); border: 1px dashed var(--border); background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; overflow: hidden; color: var(--text-secondary); font-size: 12px; }
+#style-preview-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.style-result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.style-card { border-radius: var(--radius); padding: 12px 14px; position: relative; border: 1px solid var(--border); background: var(--bg); transition: box-shadow .15s; }
+.style-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.style-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: var(--radius); background: var(--bg-secondary); margin-bottom: 8px; }
+.style-card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.style-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
+.style-card-detail { font-size: 12px; line-height: 1.5; color: var(--text-secondary); white-space: pre-wrap; word-break: break-all; }
+.style-card-memo { font-size: 11px; color: var(--accent); margin-top: 6px; }
+.style-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.style-card-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .12s; }
+.style-card:hover .style-card-actions { opacity: 1; }
+#style-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+
 /* ── Hot Items ── */
 .hot-kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
 .hot-kpi { background: var(--bg); border-radius: var(--radius); border: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
@@ -270,6 +286,9 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
     <div class="nav-item" onclick="switchTab('brands')" data-tab="brands">
       <span class="icon">🏷️</span> 브랜드 & 쿠폰
     </div>
+    <div class="nav-item" onclick="switchTab('style')" data-tab="style">
+      <span class="icon">👓</span> 스타일 분석
+    </div>
     <div class="nav-item" onclick="switchTab('todos')" data-tab="todos">
       <span class="icon">✅</span> 할 일 / 메모
     </div>
@@ -297,7 +316,7 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
         <div class="tab-header-actions">
           <div class="toolbar" style="margin:0;gap:6px;">
             <button class="chip active" data-subview="stock" onclick="setProductSubview('stock')">재고</button>
-            <button class="chip" data-subview="sales" onclick="setProductSubview('sales')">판매</button>
+            <button class="chip" data-subview="sales" onclick="setProductSubview('sales')">상품정보</button>
             <button class="chip" data-subview="combined" onclick="setProductSubview('combined')">통합</button>
             <button class="chip" data-subview="restock" onclick="setProductSubview('restock')">재입고 알림</button>
           </div>
@@ -614,6 +633,31 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
         </div>
       </div>
 
+      <!-- 온/오프라인 매출 비교 -->
+      <div id="online-offline-compare" style="display:none;background:var(--bg-secondary);border-radius:10px;padding:14px 16px;margin-bottom:1.5rem;"></div>
+
+      <!-- 온라인 주간통계 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text-secondary);">온라인 주간통계 <span id="online-weekly-badge" style="display:none;font-size:11px;background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:5px;font-weight:400;margin-left:6px;"></span></div>
+        <button class="btn btn-sm" onclick="document.getElementById('online-weekly-file').click()"><i class="ti ti-upload"></i> 주간통계 엑셀</button>
+        <input type="file" id="online-weekly-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleOnlineWeeklyFile(event)">
+      </div>
+      <div id="online-weekly-kpi" class="kpi-grid" style="display:none;margin-bottom:1.5rem;"></div>
+      <div id="online-weekly-charts-wrap" class="charts-grid" style="display:none;">
+        <div class="chart-card">
+          <h4>주차별 매출 · 판매수량</h4>
+          <div style="position:relative;height:220px;">
+            <canvas id="online-weekly-chart-revenue"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h4>주차별 광고비 (네이버 · 구글)</h4>
+          <div style="position:relative;height:220px;">
+            <canvas id="online-weekly-chart-ad"></canvas>
+          </div>
+        </div>
+      </div>
+
       <!-- Weekly report upload + table -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:13px;font-weight:600;color:var(--text-secondary);">브랜드별 상세 <span id="weekly-report-badge" style="display:none;font-size:11px;background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:5px;font-weight:400;margin-left:6px;"></span></div>
@@ -628,6 +672,29 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
         </table>
       </div>
       <div id="coupon-insight" style="display:none;"></div>
+
+      <!-- 온라인 브랜드별 통계 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;margin-top:1.5rem;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text-secondary);">온라인 브랜드별 통계 <span id="online-brand-badge" style="display:none;font-size:11px;color:var(--text-secondary);font-weight:400;margin-left:4px;"></span></div>
+      </div>
+      <div id="online-brand-table-wrap" class="table-wrap" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortTable('onlineBrand','brand')" style="cursor:pointer;">브랜드 <span id="onlineBrand-sort-brand">↕</span></th>
+              <th onclick="sortTable('onlineBrand','qty')" style="cursor:pointer;text-align:right">판매수량 <span id="onlineBrand-sort-qty">↕</span></th>
+              <th onclick="sortTable('onlineBrand','revenue')" style="cursor:pointer;text-align:right">매출 <span id="onlineBrand-sort-revenue">↕</span></th>
+              <th onclick="sortTable('onlineBrand','cost')" style="cursor:pointer;text-align:right">상품원가 <span id="onlineBrand-sort-cost">↕</span></th>
+              <th onclick="sortTable('onlineBrand','etc')" style="cursor:pointer;text-align:right">부대비용 <span id="onlineBrand-sort-etc">↕</span></th>
+              <th onclick="sortTable('onlineBrand','ad')" style="cursor:pointer;text-align:right">광고비 <span id="onlineBrand-sort-ad">↕</span></th>
+              <th onclick="sortTable('onlineBrand','coupon')" style="cursor:pointer;text-align:right">쿠폰사용액 <span id="onlineBrand-sort-coupon">↕</span></th>
+              <th onclick="sortTable('onlineBrand','profit')" style="cursor:pointer;text-align:right">이익 <span id="onlineBrand-sort-profit">↕</span></th>
+              <th onclick="sortTable('onlineBrand','costRatio')" style="cursor:pointer;text-align:right">원가율 <span id="onlineBrand-sort-costRatio">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="online-brand-tbody"></tbody>
+        </table>
+      </div>
 
       <!-- Store (franchise) sales -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;margin-top:1.5rem;flex-wrap:wrap;gap:8px;">
@@ -728,7 +795,7 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
                 <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">실적 (원, 수동)</label><input type="number" id="goal-offline-actual" placeholder="예: 100000000" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--bg);color:var(--text);"></div>
               </div>
             </div>
-            <div style="font-size:11px;color:var(--text-secondary);">매출 현황 데이터를 업로드하면 브랜드 채널(온라인/오프라인) 기준으로 실적이 자동 반영돼요. 없으면 위 수동 입력값을 사용합니다.</div>
+            <div style="font-size:11px;color:var(--text-secondary);">온라인 주간통계 · 가맹점 매출 · 매출 현황 데이터를 업로드하면 채널(온라인/오프라인)별 실적이 자동 반영돼요. 없으면 위 수동 입력값을 사용합니다.</div>
           </div>
           <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
             <button class="btn btn-sm" onclick="closeGoalModal()">취소</button>
@@ -798,6 +865,58 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
     </div>
 
     <!-- ===================== 할 일 / 메모 ===================== -->
+    <!-- ===================== 스타일 분석 ===================== -->
+    <div class="tab-pane" id="tab-style">
+      <div class="tab-header">
+        <h2>스타일 분석</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px;margin-bottom:20px;">
+        <div class="card">
+          <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;">제품 이미지 분석</div>
+          <div class="form-group">
+            <label>제품 이미지 URL</label>
+            <input type="text" id="style-image-url" placeholder="https://..." oninput="previewStyleImage()">
+          </div>
+          <div id="style-preview-wrap"><span>이미지 미리보기</span></div>
+          <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="analyzeStyleImage()" id="style-analyze-btn">
+            <i class="ti ti-sparkles"></i> 분석하기
+          </button>
+        </div>
+        <div class="card" id="style-result-card" style="display:none;">
+          <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;">분석 결과 <span style="font-weight:400;">(수정 후 저장 가능)</span></div>
+          <div class="style-result-grid">
+            <div class="form-group" style="margin-bottom:8px;">
+              <label>프레임 소재</label>
+              <input type="text" id="style-res-material">
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label>프레임 형태</label>
+              <input type="text" id="style-res-shape">
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label>프레임 스타일</label>
+              <input type="text" id="style-res-style">
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label>소재/디테일</label>
+              <input type="text" id="style-res-detail">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>메모 (선택)</label>
+            <textarea id="style-res-memo" placeholder="추가 메모"></textarea>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveStyleEntry()">기록에 저장</button>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span style="font-size:13px;font-weight:600;color:var(--text-secondary);">분석 기록</span>
+        </div>
+        <div id="style-grid"></div>
+      </div>
+    </div>
+
     <div class="tab-pane" id="tab-todos">
       <div class="tab-header">
         <h2>할 일 / 업무 메모</h2>
@@ -1038,6 +1157,42 @@ Ray-Ban	47	6836438	2263805	▼18	366		871590"></textarea>
   </div>
 </div>
 
+<!-- Modal: Style Analysis Edit -->
+<div class="modal-overlay" id="style-modal" style="display:none;">
+  <div class="modal">
+    <h3>스타일 분석 수정</h3>
+    <input type="hidden" id="style-edit-idx" value="-1">
+    <div id="style-modal-preview-wrap" style="width:100%;aspect-ratio:1/1;max-width:160px;border-radius:var(--radius);overflow:hidden;background:var(--bg-secondary);margin-bottom:12px;">
+      <img id="style-modal-preview" style="width:100%;height:100%;object-fit:cover;">
+    </div>
+    <div class="form-group">
+      <label>프레임 소재</label>
+      <input type="text" id="style-edit-material">
+    </div>
+    <div class="form-group">
+      <label>프레임 형태</label>
+      <input type="text" id="style-edit-shape">
+    </div>
+    <div class="form-group">
+      <label>프레임 스타일</label>
+      <input type="text" id="style-edit-style">
+    </div>
+    <div class="form-group">
+      <label>소재/디테일</label>
+      <input type="text" id="style-edit-detail">
+    </div>
+    <div class="form-group">
+      <label>메모</label>
+      <textarea id="style-edit-memo" placeholder="추가 메모"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('style-modal')">취소</button>
+      <button id="style-delete-btn" class="btn" style="background:#fee2e2;color:#dc2626;" onclick="deleteStyleEntry()">삭제</button>
+      <button class="btn btn-primary" onclick="saveStyleEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Brand -->
 <div class="modal-overlay" id="brand-modal" style="display:none;">
   <div class="modal">
@@ -1160,6 +1315,8 @@ let editingEventIdx = null;
 let todosData = JSON.parse(localStorage.getItem('todosData') || '[]');
 let notesData = localStorage.getItem('notesData') || '';
 let memosData = JSON.parse(localStorage.getItem('memosData') || '[]');
+let styleData = JSON.parse(localStorage.getItem('styleAnalysisData') || '[]');
+let styleCurrentResult = null;
 
 // 브랜드/쿠폰 캐시 (localStorage로 즉시 렌더)
 let brandData  = JSON.parse(localStorage.getItem('brandData')  || '[]');
@@ -1210,8 +1367,10 @@ function init() {
   initTodos();
   renderMemos();
   renderMemoLockState();
+  renderStyleGrid();
   if (storeSalesDaily.length) { renderStoreMonthFilter(); applyStoreMonthFilter(); }
   renderGoalCard();
+  if (onlineWeeklyTrend.length || onlineWeeklyBrands.length) renderOnlineWeeklyStats();
 
   // 캐시된 브랜드/쿠폰이 있으면 즉시 렌더 (Sheets 응답 전에 표시)
   if (brandData.length || couponData.length) {
@@ -1338,6 +1497,60 @@ function init() {
       filterBrands();
       document.getElementById('brand-upload-zone').style.display = 'none';
     }).catch(()=>{});
+
+    // 온라인 주간통계(트렌드) 로드
+    loadSheetData('온라인주간통계').then(d => {
+      if (!d || !Array.isArray(d) || d.length < 2) return;
+      const header = d[0].map(h => String(h));
+      const loaded = d.slice(1).map(row => {
+        const obj = {};
+        header.forEach((h,i) => obj[h] = row[i] !== undefined ? row[i] : '');
+        return obj;
+      }).filter(r => r.week);
+      if (!loaded.length) return;
+      onlineWeeklyTrend = loaded.map(r => ({
+        week: String(r.week), startDate: normalizeSheetDateStr(r.startDate), endDate: normalizeSheetDateStr(r.endDate),
+        qty: Number(r.qty) || 0, revenue: Number(r.revenue) || 0,
+        naverAd: Number(r.naverAd) || 0, googleAd: Number(r.googleAd) || 0, totalAd: Number(r.totalAd) || 0,
+      }));
+      localStorage.setItem('onlineWeeklyTrend', JSON.stringify(onlineWeeklyTrend));
+      renderOnlineWeeklyKPI();
+      renderOnlineWeeklyCharts();
+    }).catch(()=>{});
+
+    // 온라인 브랜드별 통계 로드
+    loadSheetData('온라인브랜드통계').then(d => {
+      if (!d || !Array.isArray(d) || d.length < 2) return;
+      const header = d[0].map(h => String(h));
+      const loaded = d.slice(1).map(row => {
+        const obj = {};
+        header.forEach((h,i) => obj[h] = row[i] !== undefined ? row[i] : '');
+        return obj;
+      }).filter(r => r.brand);
+      if (!loaded.length) return;
+      onlineWeeklyBrands = loaded.map(r => ({
+        brand: String(r.brand), qty: Number(r.qty) || 0, revenue: Number(r.revenue) || 0, cost: Number(r.cost) || 0,
+        etc: Number(r.etc) || 0, ad: Number(r.ad) || 0, coupon: Number(r.coupon) || 0, profit: Number(r.profit) || 0,
+        costRatio: Number(r.costRatio) || 0,
+      }));
+      localStorage.setItem('onlineWeeklyBrands', JSON.stringify(onlineWeeklyBrands));
+      renderOnlineBrandTable();
+    }).catch(()=>{});
+
+    // 스타일 분석 기록 로드
+    loadSheetData('스타일분석').then(d => {
+      if (!d || !Array.isArray(d) || d.length < 2) return;
+      const header = d[0].map(h => String(h));
+      const loaded = d.slice(1).map(row => {
+        const obj = {};
+        header.forEach((h,i) => obj[h] = row[i] !== undefined ? String(row[i]) : '');
+        return obj;
+      }).filter(r => r.imageUrl);
+      if (!loaded.length) return;
+      styleData = loaded;
+      localStorage.setItem('styleAnalysisData', JSON.stringify(styleData));
+      renderStyleGrid();
+    }).catch(()=>{});
   }
 }
 
@@ -1369,7 +1582,7 @@ async function saveSheetData(sheet, data) {
 // ============================================================
 // NAVIGATION
 // ============================================================
-const tabTitles = { inventory:'상품', calendar:'마케팅 캘린더', coupons:'브랜드 & 쿠폰', weekly:'매출 현황', brands:'브랜드 & 쿠폰', todos:'할 일 / 업무 메모' };
+const tabTitles = { inventory:'상품', calendar:'마케팅 캘린더', coupons:'브랜드 & 쿠폰', weekly:'매출 현황', brands:'브랜드 & 쿠폰', style:'스타일 분석', todos:'할 일 / 업무 메모' };
 const TODO_PW = '0001'; // 비밀번호 변경 시 여기 수정
 let todoUnlocked = false;
 let memoUnlocked = false;
@@ -2153,7 +2366,7 @@ function renderHotItems() {
 // ============================================================
 // SORT
 // ============================================================
-const sortState = { inv: { key: '', dir: 1 }, prod: { key: '', dir: 1 }, restock: { key: 'count', dir: -1 }, store: { key: 'revenue', dir: -1 } };
+const sortState = { inv: { key: '', dir: 1 }, prod: { key: '', dir: 1 }, restock: { key: 'count', dir: -1 }, store: { key: 'revenue', dir: -1 }, onlineBrand: { key: 'revenue', dir: -1 } };
 const hotSortState = {
   soldOut:     { key: '', dir: 1 },
   lowStock:    { key: '', dir: 1 },
@@ -2193,6 +2406,7 @@ function sortTable(type, key) {
   else if (type === 'prod') { prodPage = 1; renderProdTable(); }
   else if (type === 'restock') { restockPage = 1; renderRestockTable(); }
   else if (type === 'store') { renderStoreSalesTable(); }
+  else if (type === 'onlineBrand') { renderOnlineBrandTable(); }
 
 }
 
@@ -2225,6 +2439,15 @@ function applySortStore(arr) {
 
 function applySortRestock(arr) {
   const { key, dir } = sortState.restock;
+  if (!key) return arr;
+  return [...arr].sort((a, b) => {
+    const av = a[key] ?? ''; const bv = b[key] ?? '';
+    return typeof av === 'number' ? (av - bv) * dir : String(av).localeCompare(String(bv), 'ko') * dir;
+  });
+}
+
+function applySortOnlineBrand(arr) {
+  const { key, dir } = sortState.onlineBrand;
   if (!key) return arr;
   return [...arr].sort((a, b) => {
     const av = a[key] ?? ''; const bv = b[key] ?? '';
@@ -2397,9 +2620,13 @@ function parseProdRows(headerRow, dataRows) {
       const hi = {};
       headerRow.forEach((h, i) => { if (h) hi[h.trim()] = i; });
 
-      function col(row, name) {
-        const idx = hi[name];
-        return idx !== undefined ? String(row[idx] ?? '').trim() : '';
+      function col(row, names) {
+        const candidates = Array.isArray(names) ? names : [names];
+        for (const name of candidates) {
+          const idx = hi[name];
+          if (idx !== undefined) return String(row[idx] ?? '').trim();
+        }
+        return '';
       }
       function parsePrice(s) {
         return parseInt(String(s).replace(/[",\s]/g, '')) || 0;
@@ -2422,15 +2649,20 @@ function parseProdRows(headerRow, dataRows) {
         return v || '-';
       }
 
+      if (!hi['상품코드']) {
+        showToast('⚠️ "상품코드" 컬럼을 찾을 수 없습니다. 파일 헤더를 확인해주세요.');
+        return;
+      }
+
       prodData = dataRows.map((row, i) => {
         const code = col(row, '상품코드');
         if (!code) return null;
         return {
           code,
-          refName: cleanName(col(row, '참고 상품명')),
+          refName: cleanName(col(row, ['참고상품명', '참고 상품명'])),
           name: col(row, '상품명'),
-          category: parseCatCMS(col(row, '대분류')),
-          brand: col(row, '브랜드 대분류'),
+          category: parseCatCMS(col(row, ['카테고리', '대분류'])),
+          brand: col(row, ['브랜드', '브랜드 대분류']),
           price: parsePrice(col(row, '판매가')),
           status: parseCmsStatus(col(row, '상품상태')),
           views: parseInt(col(row, '조회수')) || 0,
@@ -2438,6 +2670,13 @@ function parseProdRows(headerRow, dataRows) {
           sales: parseInt(col(row, '판매수')) || 0,
         };
       }).filter(Boolean);
+
+      if (prodData.length && !prodData.some(r => r.category) ) {
+        showToast('⚠️ "카테고리" 컬럼을 인식하지 못했습니다. 헤더명을 확인해주세요.', 'warn');
+      }
+      if (prodData.length && !prodData.some(r => r.brand)) {
+        showToast('⚠️ "브랜드" 컬럼을 인식하지 못했습니다. 헤더명을 확인해주세요.', 'warn');
+      }
 
       renderProdKPI();
       filterProducts();
@@ -3189,6 +3428,156 @@ function saveMemosToSheets() {
 }
 
 // ============================================================
+// STYLE ANALYSIS
+// ============================================================
+function previewStyleImage() {
+  const url = document.getElementById('style-image-url').value.trim();
+  const wrap = document.getElementById('style-preview-wrap');
+  if (!url) { wrap.innerHTML = '<span>이미지 미리보기</span>'; return; }
+  wrap.innerHTML = `<img src="${url}" onerror="this.parentElement.innerHTML='<span>이미지를 불러올 수 없습니다</span>'">`;
+}
+
+async function analyzeStyleImage() {
+  const url = document.getElementById('style-image-url').value.trim();
+  if (!url) { showToast('이미지 URL을 입력하세요.'); return; }
+  if (!SCRIPT_URL) { showToast('설정에서 Apps Script URL을 먼저 등록하세요.'); return; }
+
+  const btn = document.getElementById('style-analyze-btn');
+  btn.disabled = true;
+  btn.innerHTML = '분석 중...';
+  document.getElementById('style-result-card').style.display = 'none';
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'analyzeStyle', imageUrl: url })
+    });
+    const json = await res.json();
+    const err = json.error || (json.result && json.result.error);
+    if (err) { showToast('분석 실패: ' + err); return; }
+
+    const style = json.result && json.result.style;
+    if (!style) { showToast('분석 결과를 받지 못했습니다.'); return; }
+
+    styleCurrentResult = { imageUrl: url, ...style };
+    document.getElementById('style-res-material').value = style.frameMaterial || '';
+    document.getElementById('style-res-shape').value = style.frameShape || '';
+    document.getElementById('style-res-style').value = style.frameStyle || '';
+    document.getElementById('style-res-detail').value = style.materialDetail || '';
+    document.getElementById('style-res-memo').value = '';
+    document.getElementById('style-result-card').style.display = 'block';
+    showToast('분석 완료');
+  } catch (e) {
+    showToast('분석 중 오류가 발생했습니다.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-sparkles"></i> 분석하기';
+  }
+}
+
+function saveStyleEntry() {
+  if (!styleCurrentResult) return;
+  const entry = {
+    imageUrl: styleCurrentResult.imageUrl,
+    frameMaterial: document.getElementById('style-res-material').value.trim(),
+    frameShape: document.getElementById('style-res-shape').value.trim(),
+    frameStyle: document.getElementById('style-res-style').value.trim(),
+    materialDetail: document.getElementById('style-res-detail').value.trim(),
+    memo: document.getElementById('style-res-memo').value.trim(),
+    created: new Date().toLocaleDateString('ko-KR')
+  };
+  styleData.unshift(entry);
+  saveStyleToSheets();
+  renderStyleGrid();
+  document.getElementById('style-result-card').style.display = 'none';
+  document.getElementById('style-image-url').value = '';
+  document.getElementById('style-preview-wrap').innerHTML = '<span>이미지 미리보기</span>';
+  styleCurrentResult = null;
+  showToast('분석 기록에 저장했습니다.');
+}
+
+function renderStyleGrid() {
+  const grid = document.getElementById('style-grid');
+  if (!grid) return;
+  if (!styleData.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);font-size:14px;">저장된 분석 기록이 없습니다.</div>';
+    return;
+  }
+  grid.innerHTML = styleData.map((s, idx) => `
+    <div class="style-card">
+      <img src="${s.imageUrl}" onerror="this.style.display='none'">
+      <div class="style-card-tags">
+        ${s.frameMaterial ? `<span class="style-tag">${s.frameMaterial}</span>` : ''}
+        ${s.frameShape ? `<span class="style-tag">${s.frameShape}</span>` : ''}
+        ${s.frameStyle ? `<span class="style-tag">${s.frameStyle}</span>` : ''}
+      </div>
+      <div class="style-card-detail">${s.materialDetail || ''}</div>
+      ${s.memo ? `<div class="style-card-memo">📝 ${s.memo}</div>` : ''}
+      <div class="style-card-footer">
+        <span style="font-size:10px;color:#9ca3af;">${s.created || ''}</span>
+        <div class="style-card-actions">
+          <button class="btn btn-sm" style="padding:2px 8px;background:rgba(0,0,0,.08);" onclick="openStyleEditModal(${idx})">✏️</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openStyleEditModal(idx) {
+  const s = styleData[idx];
+  if (!s) return;
+  document.getElementById('style-edit-idx').value = idx;
+  document.getElementById('style-modal-preview').src = s.imageUrl || '';
+  document.getElementById('style-edit-material').value = s.frameMaterial || '';
+  document.getElementById('style-edit-shape').value = s.frameShape || '';
+  document.getElementById('style-edit-style').value = s.frameStyle || '';
+  document.getElementById('style-edit-detail').value = s.materialDetail || '';
+  document.getElementById('style-edit-memo').value = s.memo || '';
+  document.getElementById('style-modal').style.display = 'flex';
+}
+
+function saveStyleEdit() {
+  const idx = parseInt(document.getElementById('style-edit-idx').value);
+  if (isNaN(idx) || idx < 0 || !styleData[idx]) return;
+  styleData[idx] = {
+    ...styleData[idx],
+    frameMaterial: document.getElementById('style-edit-material').value.trim(),
+    frameShape: document.getElementById('style-edit-shape').value.trim(),
+    frameStyle: document.getElementById('style-edit-style').value.trim(),
+    materialDetail: document.getElementById('style-edit-detail').value.trim(),
+    memo: document.getElementById('style-edit-memo').value.trim(),
+  };
+  closeModal('style-modal');
+  saveStyleToSheets();
+  renderStyleGrid();
+  showToast('수정 완료');
+}
+
+function deleteStyleEntry() {
+  const idx = parseInt(document.getElementById('style-edit-idx').value);
+  if (isNaN(idx) || idx < 0) return;
+  if (!confirm('이 분석 기록을 삭제할까요?')) return;
+  styleData.splice(idx, 1);
+  closeModal('style-modal');
+  saveStyleToSheets();
+  renderStyleGrid();
+  showToast('삭제 완료');
+}
+
+function saveStyleToSheets() {
+  localStorage.setItem('styleAnalysisData', JSON.stringify(styleData));
+  if (!SCRIPT_URL) return;
+  const header = ['imageUrl','frameMaterial','frameShape','frameStyle','materialDetail','memo','created'];
+  const rows = styleData.map(s => [s.imageUrl||'', s.frameMaterial||'', s.frameShape||'', s.frameStyle||'', s.materialDetail||'', s.memo||'', s.created||'']);
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({action:'saveData', sheet:'스타일분석', data:[header, ...rows]}),
+    headers: {'Content-Type':'text/plain'}
+  }).catch(()=>{});
+}
+
+// ============================================================
 // MODALS / UTILITIES
 // ============================================================
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -3529,9 +3918,10 @@ function isOfflineChannel(brandName) {
 }
 
 function computeAutoChannelRevenue() {
-  const hasWeekly = typeof weeklyReportData !== 'undefined' && weeklyReportData.length > 0;
-  const hasStore  = typeof storeSalesData   !== 'undefined' && storeSalesData.length   > 0;
-  if (!hasWeekly && !hasStore) return { online: null, offline: null };
+  const hasWeekly = typeof weeklyReportData   !== 'undefined' && weeklyReportData.length   > 0;
+  const hasStore  = typeof storeSalesData     !== 'undefined' && storeSalesData.length     > 0;
+  const hasOnline = typeof onlineWeeklyTrend  !== 'undefined' && onlineWeeklyTrend.length   > 0;
+  if (!hasWeekly && !hasStore && !hasOnline) return { online: null, offline: null };
 
   let online = null, offline = null;
   if (hasWeekly) {
@@ -3540,6 +3930,8 @@ function computeAutoChannelRevenue() {
     offline = 0;
     weeklyReportData.forEach(r => { if (isOfflineChannel(r.brand)) offline += r.revenue; });
   }
+  // 온라인 주간통계(누적 업로드분)가 있으면 이 값을 온라인 실적으로 우선 사용
+  if (hasOnline) online = onlineWeeklyTrend.reduce((s, w) => s + w.revenue, 0);
   // 가맹점 매출(매장별 실제 오프라인 판매) 데이터가 있으면 이 값을 오프라인 실적으로 우선 사용
   if (hasStore) offline = storeSalesData.reduce((s, r) => s + r.revenue, 0);
 
@@ -3757,6 +4149,7 @@ function applyStoreMonthFilter() {
   document.getElementById('store-sales-table-wrap').style.display = hasData ? 'block' : 'none';
   renderStoreSalesKPI();
   renderStoreSalesTable();
+  renderOnlineOfflineCompare();
 }
 
 function renderStoreSalesKPI() {
@@ -3786,6 +4179,311 @@ function renderStoreSalesTable() {
       <td>${r.avgPrice.toLocaleString()}원</td>
     </tr>
   `).join('');
+}
+
+// ============================================================
+// ONLINE WEEKLY STATS — 주차별 트렌드(누적) + 브랜드별 통계(최신 스냅샷)
+// 엑셀 파일 안의 여러 시트를 헤더로 구분해서 자동 인식: '주차' 컬럼 → 트렌드, '브랜드' 컬럼 → 브랜드 통계
+// ============================================================
+let onlineWeeklyTrend = JSON.parse(localStorage.getItem('onlineWeeklyTrend') || '[]'); // [{week, startDate, endDate, qty, revenue, naverAd, googleAd, totalAd}]
+let onlineWeeklyBrands = JSON.parse(localStorage.getItem('onlineWeeklyBrands') || '[]'); // [{brand, qty, revenue, cost, etc, ad, coupon, profit, costRatio}]
+let onlineWeeklyChartRevenue = null;
+let onlineWeeklyChartAd = null;
+
+function excelSerialToStr(v) {
+  // XLSX.read(..., { cellDates: true }) builds Date objects whose LOCAL wall-clock fields
+  // match the spreadsheet's date (not UTC), so read them back with local getters.
+  if (v instanceof Date) {
+    return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
+  }
+  if (typeof v === 'number') {
+    const d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  }
+  return String(v || '').trim();
+}
+
+// Google Sheets는 'YYYY-MM-DD' 문자열을 저장할 때 실제 날짜 셀로 자동 변환하고,
+// Apps Script는 그 셀을 다시 읽을 때 ISO datetime 문자열로 돌려준다 — 저장 당시 로컬 날짜로 복원.
+function normalizeSheetDateStr(v) {
+  const s = String(v || '').trim();
+  if (!s || /^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function handleOnlineWeeklyFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  showToast('온라인 주간통계 파일 파싱 중...');
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array', cellDates: true });
+      let weekCount = 0, brandCount = 0;
+      wb.SheetNames.forEach(name => {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' });
+        if (!rows.length) return;
+        const sample = rows.slice(0, 5);
+        if (sample.some(r => r.some(c => String(c).trim() === '주차'))) weekCount += parseOnlineWeeklyTrend(rows);
+        if (sample.some(r => r.some(c => String(c).trim() === '브랜드'))) brandCount = parseOnlineWeeklyBrands(rows) || brandCount;
+      });
+      if (!weekCount && !brandCount) { showToast('인식 가능한 시트를 찾을 수 없습니다 (주차/브랜드 컬럼 확인)'); return; }
+      const badge = document.getElementById('online-weekly-badge');
+      if (badge) { badge.textContent = file.name + ' 반영됨'; badge.style.display = ''; }
+      renderOnlineWeeklyStats();
+      showToast(`✅ 온라인 주간통계 반영 (주차 ${weekCount}건, 브랜드 ${brandCount}개)`);
+    } catch (err) { showToast('파싱 오류: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = '';
+}
+
+function parseOnlineWeeklyTrend(rows) {
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(rows.length, 5); i++) {
+    if (rows[i].some(c => String(c).trim() === '주차')) { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) return 0;
+  const header = rows[headerIdx].map(c => String(c).trim());
+  const hi = {};
+  header.forEach((h, i) => { if (h) hi[h] = i; });
+  const get = (row, ...keys) => { for (const k of keys) { if (hi[k] !== undefined) return row[hi[k]]; } return ''; };
+  const getNum = (row, ...keys) => { const v = get(row, ...keys); return parseFloat(String(v).replace(/,/g, '')) || 0; };
+
+  let added = 0;
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    const week = String(get(row, '주차') || '').trim();
+    if (!week) continue;
+    const entry = {
+      week,
+      startDate: excelSerialToStr(get(row, '주시작일')),
+      endDate:   excelSerialToStr(get(row, '주종료일')),
+      qty:      getNum(row, '판매수량'),
+      revenue:  getNum(row, '총매출'),
+      naverAd:  getNum(row, '네이버 광고비(주간합)', '네이버 광고비'),
+      googleAd: getNum(row, '구글 광고비'),
+      totalAd:  getNum(row, '합계 광고비'),
+    };
+    const idx = onlineWeeklyTrend.findIndex(w => w.week === entry.week);
+    if (idx >= 0) onlineWeeklyTrend[idx] = entry; else onlineWeeklyTrend.push(entry);
+    added++;
+  }
+  if (added) {
+    onlineWeeklyTrend.sort((a, b) => a.startDate.localeCompare(b.startDate));
+    localStorage.setItem('onlineWeeklyTrend', JSON.stringify(onlineWeeklyTrend));
+    saveOnlineWeeklyTrendToSheets();
+  }
+  return added;
+}
+
+function parseOnlineWeeklyBrands(rows) {
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(rows.length, 5); i++) {
+    if (rows[i].some(c => String(c).trim() === '브랜드')) { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) return 0;
+  const header = rows[headerIdx].map(c => String(c).trim());
+  const hi = {};
+  header.forEach((h, i) => { if (h) hi[h] = i; });
+  const get = (row, ...keys) => { for (const k of keys) { if (hi[k] !== undefined) return row[hi[k]]; } return ''; };
+  const getNum = (row, ...keys) => { const v = get(row, ...keys); return parseFloat(String(v).replace(/,/g, '')) || 0; };
+  const skip = new Set(['전체 합계', 'top10 소계', '합계', '소계']);
+
+  const data = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    const brand = String(get(row, '브랜드') || '').trim();
+    if (!brand || skip.has(brand.toLowerCase())) continue;
+    data.push({
+      brand,
+      qty:       getNum(row, '판매수량'),
+      revenue:   getNum(row, '매출'),
+      cost:      getNum(row, '상품원가'),
+      etc:       getNum(row, '부대비용'),
+      ad:        getNum(row, '광고비'),
+      coupon:    getNum(row, '쿠폰사용액'),
+      profit:    getNum(row, '이익'),
+      costRatio: getNum(row, '원가율'),
+    });
+  }
+  if (!data.length) return 0;
+  onlineWeeklyBrands = data;
+  localStorage.setItem('onlineWeeklyBrands', JSON.stringify(onlineWeeklyBrands));
+  saveOnlineWeeklyBrandsToSheets();
+  return data.length;
+}
+
+function saveOnlineWeeklyTrendToSheets() {
+  const header = ['week', 'startDate', 'endDate', 'qty', 'revenue', 'naverAd', 'googleAd', 'totalAd'];
+  const rows = onlineWeeklyTrend.map(w => [w.week, w.startDate, w.endDate, w.qty, w.revenue, w.naverAd, w.googleAd, w.totalAd]);
+  saveSheetData('온라인주간통계', [header, ...rows]);
+}
+
+function saveOnlineWeeklyBrandsToSheets() {
+  const header = ['brand', 'qty', 'revenue', 'cost', 'etc', 'ad', 'coupon', 'profit', 'costRatio'];
+  const rows = onlineWeeklyBrands.map(r => [r.brand, r.qty, r.revenue, r.cost, r.etc, r.ad, r.coupon, r.profit, r.costRatio]);
+  saveSheetData('온라인브랜드통계', [header, ...rows]);
+}
+
+function renderOnlineWeeklyStats() {
+  renderOnlineWeeklyKPI();
+  renderOnlineWeeklyCharts();
+  renderOnlineBrandTable();
+  renderOnlineOfflineCompare();
+  renderGoalCard();
+}
+
+// 최근 온라인 주차의 날짜 범위와 겹치는 오프라인(라운즈 가맹점) 일자별 매출을 합산해 비교
+function renderOnlineOfflineCompare() {
+  const wrap = document.getElementById('online-offline-compare');
+  if (!wrap) return;
+  if (!onlineWeeklyTrend.length || !storeSalesDaily.length) { wrap.style.display = 'none'; return; }
+
+  const latest = [...onlineWeeklyTrend].sort((a, b) => a.startDate.localeCompare(b.startDate)).pop();
+  const offlineRows = storeSalesDaily.filter(d => d.date >= latest.startDate && d.date <= latest.endDate);
+  if (!offlineRows.length) { wrap.style.display = 'none'; return; }
+
+  const offlineRevenue = offlineRows.reduce((s, r) => s + r.revenue, 0);
+  const offlineQty = offlineRows.reduce((s, r) => s + r.qty, 0);
+  const total = latest.revenue + offlineRevenue;
+  const onlinePct = total ? Math.round(latest.revenue / total * 100) : 0;
+  const offlinePct = 100 - onlinePct;
+
+  wrap.style.display = 'block';
+  wrap.innerHTML = `
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;">🖥️🏬 온/오프라인 매출 비교 <span style="font-weight:400;color:var(--text-secondary);">(${latest.week} · ${latest.startDate} ~ ${latest.endDate})</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:10px;">
+      <div class="kpi-card kpi-accent"><div class="kpi-label">🖥️ 온라인</div><div class="kpi-value">${Math.round(latest.revenue / 10000).toLocaleString()}만</div><div class="kpi-sub">${latest.revenue.toLocaleString()}원 · ${latest.qty.toLocaleString()}건 · ${onlinePct}%</div></div>
+      <div class="kpi-card kpi-green"><div class="kpi-label">🏬 오프라인 (라운즈 가맹점)</div><div class="kpi-value">${Math.round(offlineRevenue / 10000).toLocaleString()}만</div><div class="kpi-sub">${offlineRevenue.toLocaleString()}원 · ${offlineQty.toLocaleString()}건 · ${offlinePct}%</div></div>
+    </div>
+    <div style="height:10px;border-radius:5px;overflow:hidden;display:flex;">
+      <div style="width:${onlinePct}%;background:var(--accent);"></div>
+      <div style="width:${offlinePct}%;background:var(--green);"></div>
+    </div>
+  `;
+}
+
+function renderOnlineWeeklyKPI() {
+  const kpi = document.getElementById('online-weekly-kpi');
+  if (!kpi) return;
+  if (!onlineWeeklyTrend.length) { kpi.style.display = 'none'; return; }
+  const sorted = [...onlineWeeklyTrend].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const latest = sorted[sorted.length - 1];
+  const prev = sorted.length > 1 ? sorted[sorted.length - 2] : null;
+  const diffHtml = (cur, before) => {
+    if (!prev || !before) return '';
+    const pct = (cur - before) / before * 100;
+    const arrow = pct > 0 ? '▲' : pct < 0 ? '▼' : '-';
+    const color = pct > 0 ? '#1D9E75' : pct < 0 ? 'var(--red)' : 'var(--text-secondary)';
+    return `<div class="kpi-diff" style="color:${color}">${arrow} ${Math.abs(pct).toFixed(1)}% 전주比</div>`;
+  };
+  kpi.style.display = 'grid';
+  kpi.innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">최근 주차</div><div class="kpi-value" style="font-size:14px;">${latest.week}</div><div class="kpi-sub">${latest.startDate} ~ ${latest.endDate}</div></div>
+    <div class="kpi-card kpi-accent"><div class="kpi-label">판매수량</div><div class="kpi-value">${latest.qty.toLocaleString()}</div>${diffHtml(latest.qty, prev && prev.qty)}</div>
+    <div class="kpi-card kpi-green"><div class="kpi-label">총매출</div><div class="kpi-value">${Math.round(latest.revenue / 10000).toLocaleString()}만</div><div class="kpi-sub">${latest.revenue.toLocaleString()}원</div>${diffHtml(latest.revenue, prev && prev.revenue)}</div>
+    <div class="kpi-card"><div class="kpi-label">합계 광고비</div><div class="kpi-value">${Math.round(latest.totalAd / 10000).toLocaleString()}만</div><div class="kpi-sub">네이버 ${latest.naverAd.toLocaleString()} · 구글 ${latest.googleAd.toLocaleString()}</div></div>
+  `;
+}
+
+function renderOnlineWeeklyCharts() {
+  const wrap = document.getElementById('online-weekly-charts-wrap');
+  if (!wrap) return;
+  if (!onlineWeeklyTrend.length || typeof Chart === 'undefined') { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'grid';
+
+  const sorted = [...onlineWeeklyTrend].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const labels = sorted.map(w => w.week);
+
+  const ctxRevenue = document.getElementById('online-weekly-chart-revenue');
+  if (onlineWeeklyChartRevenue) onlineWeeklyChartRevenue.destroy();
+  onlineWeeklyChartRevenue = new Chart(ctxRevenue, {
+    data: {
+      labels,
+      datasets: [
+        { type: 'bar', label: '총매출(원)', data: sorted.map(w => w.revenue), backgroundColor: '#4F6EF7', yAxisID: 'y' },
+        { type: 'line', label: '판매수량', data: sorted.map(w => w.qty), borderColor: '#f97316', backgroundColor: '#f97316', tension: .3, yAxisID: 'y1' },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        y:  { position: 'left', ticks: { callback: v => Math.round(v / 10000).toLocaleString() + '만' } },
+        y1: { position: 'right', grid: { drawOnChartArea: false } },
+      },
+    },
+  });
+
+  const ctxAd = document.getElementById('online-weekly-chart-ad');
+  if (onlineWeeklyChartAd) onlineWeeklyChartAd.destroy();
+  onlineWeeklyChartAd = new Chart(ctxAd, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: '네이버 광고비', data: sorted.map(w => w.naverAd), backgroundColor: '#1D9E75' },
+        { label: '구글 광고비', data: sorted.map(w => w.googleAd), backgroundColor: '#6366f1' },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, ticks: { callback: v => Math.round(v / 10000).toLocaleString() + '만' } },
+      },
+    },
+  });
+}
+
+function renderOnlineBrandTable() {
+  const wrap = document.getElementById('online-brand-table-wrap');
+  const badge = document.getElementById('online-brand-badge');
+  if (!wrap) return;
+  const hasData = onlineWeeklyBrands.length > 0;
+  wrap.style.display = hasData ? 'block' : 'none';
+  if (badge) { badge.textContent = hasData ? `${onlineWeeklyBrands.length}개 브랜드` : ''; badge.style.display = hasData ? 'inline' : 'none'; }
+  if (!hasData) return;
+
+  document.querySelectorAll('[id^="onlineBrand-sort-"]').forEach(el => {
+    const key = el.id.replace('onlineBrand-sort-', '');
+    el.textContent = sortState.onlineBrand.key === key ? (sortState.onlineBrand.dir === 1 ? '↑' : '↓') : '↕';
+  });
+
+  const sorted = applySortOnlineBrand(onlineWeeklyBrands);
+  const total = onlineWeeklyBrands.reduce((s, r) => ({
+    qty: s.qty + r.qty, revenue: s.revenue + r.revenue, cost: s.cost + r.cost, etc: s.etc + r.etc,
+    ad: s.ad + r.ad, coupon: s.coupon + r.coupon, profit: s.profit + r.profit,
+  }), { qty: 0, revenue: 0, cost: 0, etc: 0, ad: 0, coupon: 0, profit: 0 });
+
+  document.getElementById('online-brand-tbody').innerHTML = sorted.map(r => `
+    <tr>
+      <td style="font-weight:600;">${r.brand}</td>
+      <td style="text-align:right">${r.qty.toLocaleString()}</td>
+      <td style="text-align:right">${r.revenue.toLocaleString()}</td>
+      <td style="text-align:right">${r.cost.toLocaleString()}</td>
+      <td style="text-align:right">${r.etc.toLocaleString()}</td>
+      <td style="text-align:right">${r.ad > 0 ? r.ad.toLocaleString() : '-'}</td>
+      <td style="text-align:right">${r.coupon > 0 ? r.coupon.toLocaleString() : '-'}</td>
+      <td style="text-align:right;${r.profit < 0 ? 'color:var(--red);font-weight:600' : 'color:#16a34a'}">${r.profit.toLocaleString()}</td>
+      <td style="text-align:right;${r.costRatio > 1 ? 'color:var(--red);font-weight:600' : ''}">${(r.costRatio * 100).toFixed(1)}%</td>
+    </tr>
+  `).join('') + `<tr style="background:var(--bg-secondary);font-weight:600;">
+    <td>합계</td>
+    <td style="text-align:right">${total.qty.toLocaleString()}</td>
+    <td style="text-align:right">${total.revenue.toLocaleString()}</td>
+    <td style="text-align:right">${total.cost.toLocaleString()}</td>
+    <td style="text-align:right">${total.etc.toLocaleString()}</td>
+    <td style="text-align:right">${total.ad.toLocaleString()}</td>
+    <td style="text-align:right">${total.coupon.toLocaleString()}</td>
+    <td style="text-align:right;color:${total.profit < 0 ? 'var(--red)' : '#16a34a'}">${total.profit.toLocaleString()}</td>
+    <td style="text-align:right">${total.revenue > 0 ? (total.cost / total.revenue * 100).toFixed(1) + '%' : '-'}</td>
+  </tr>`;
 }
 
 function handleNaverAdFile(e) {
