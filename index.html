@@ -186,21 +186,11 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
 .memo-color-btn { padding: 4px 10px; border-radius: var(--radius); font-size: 12px; cursor: pointer; border: 2px solid transparent; transition: border .12s; }
 .memo-color-btn.selected { border-color: var(--accent); }
 
-/* ── Style Analysis ── */
-#style-preview-wrap { width: 100%; aspect-ratio: 1/1; max-width: 220px; border-radius: var(--radius); border: 1px dashed var(--border); background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; overflow: hidden; color: var(--text-secondary); font-size: 12px; }
-#style-preview-wrap img { width: 100%; height: 100%; object-fit: cover; }
+/* ── Card grid (shared by image crop results, etc.) ── */
 .style-result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .style-card { border-radius: var(--radius); padding: 12px 14px; position: relative; border: 1px solid var(--border); background: var(--bg); transition: box-shadow .15s; }
 .style-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
 .style-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: var(--radius); background: var(--bg-secondary); margin-bottom: 8px; }
-.style-card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
-.style-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
-.style-card-detail { font-size: 12px; line-height: 1.5; color: var(--text-secondary); white-space: pre-wrap; word-break: break-all; }
-.style-card-memo { font-size: 11px; color: var(--accent); margin-top: 6px; }
-.style-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
-.style-card-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .12s; }
-.style-card:hover .style-card-actions { opacity: 1; }
-#style-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
 
 /* ── Hot Items ── */
 .hot-kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
@@ -286,9 +276,6 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
     <div class="nav-item" onclick="switchTab('brands')" data-tab="brands">
       <span class="icon">🏷️</span> 브랜드 & 쿠폰
     </div>
-    <div class="nav-item" onclick="switchTab('style')" data-tab="style">
-      <span class="icon">👓</span> 스타일 분석
-    </div>
     <div class="nav-item" onclick="switchTab('imgcrop')" data-tab="imgcrop">
       <span class="icon">🖼️</span> 이미지 크롭
     </div>
@@ -331,6 +318,7 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
         <div class="tab-header" style="margin-bottom:12px;">
           <h2 style="font-size:14px;color:var(--text-secondary);">재고관리</h2>
           <div class="tab-header-actions">
+            <span class="page-info" id="uploadtime-inv"></span>
             <button class="btn btn-secondary btn-sm" onclick="reuploadInv()"><i class="ti ti-refresh"></i> 재업로드</button>
           </div>
         </div>
@@ -386,6 +374,7 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
         <div class="tab-header" style="margin-bottom:12px;">
           <h2 style="font-size:14px;color:var(--text-secondary);">상품관리</h2>
           <div class="tab-header-actions">
+            <span class="page-info" id="uploadtime-prod"></span>
             <button class="btn btn-secondary btn-sm" onclick="reuploadProd()"><i class="ti ti-refresh"></i> 재업로드</button>
           </div>
         </div>
@@ -463,6 +452,7 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
         <div class="tab-header" style="margin-bottom:12px;">
           <h2 style="font-size:14px;color:var(--text-secondary);">재입고 알림 요청</h2>
           <div class="tab-header-actions">
+            <span class="page-info" id="uploadtime-restock"></span>
             <button class="btn btn-secondary btn-sm" onclick="reuploadRestock()"><i class="ti ti-refresh"></i> 재업로드</button>
           </div>
         </div>
@@ -868,64 +858,6 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
     </div>
 
     <!-- ===================== 할 일 / 메모 ===================== -->
-    <!-- ===================== 스타일 분석 ===================== -->
-    <div class="tab-pane" id="tab-style">
-      <div class="tab-header">
-        <h2>스타일 분석</h2>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px;margin-bottom:20px;">
-        <div class="card">
-          <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;">제품 이미지 분석</div>
-          <div class="form-group">
-            <label>제품 이미지 URL</label>
-            <input type="text" id="style-image-url" placeholder="https://..." oninput="handleStyleUrlInput()">
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;margin:-6px 0 12px;color:var(--text-secondary);font-size:11px;">
-            <div style="flex:1;height:1px;background:var(--border);"></div>또는<div style="flex:1;height:1px;background:var(--border);"></div>
-          </div>
-          <div class="form-group">
-            <label>내 컴퓨터에서 이미지 업로드</label>
-            <input type="file" id="style-image-file" accept="image/*" onchange="handleStyleFileUpload(event)">
-          </div>
-          <div id="style-preview-wrap"><span>이미지 미리보기</span></div>
-          <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="analyzeStyleImage()" id="style-analyze-btn">
-            <i class="ti ti-sparkles"></i> 분석하기
-          </button>
-        </div>
-        <div class="card" id="style-result-card" style="display:none;">
-          <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;">분석 결과 <span style="font-weight:400;">(수정 후 저장 가능)</span></div>
-          <div class="style-result-grid">
-            <div class="form-group" style="margin-bottom:8px;">
-              <label>프레임 소재</label>
-              <input type="text" id="style-res-material">
-            </div>
-            <div class="form-group" style="margin-bottom:8px;">
-              <label>프레임 형태</label>
-              <input type="text" id="style-res-shape">
-            </div>
-            <div class="form-group" style="margin-bottom:8px;">
-              <label>프레임 스타일</label>
-              <input type="text" id="style-res-style">
-            </div>
-            <div class="form-group" style="margin-bottom:8px;">
-              <label>소재/디테일</label>
-              <input type="text" id="style-res-detail">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>메모 (선택)</label>
-            <textarea id="style-res-memo" placeholder="추가 메모"></textarea>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="saveStyleEntry()">기록에 저장</button>
-        </div>
-      </div>
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <span style="font-size:13px;font-weight:600;color:var(--text-secondary);">분석 기록</span>
-        </div>
-        <div id="style-grid"></div>
-      </div>
-    </div>
 
     <!-- ===================== 이미지 크롭 ===================== -->
     <div class="tab-pane" id="tab-imgcrop">
@@ -1182,42 +1114,6 @@ Ray-Ban	47	6836438	2263805	▼18	366		871590"></textarea>
   </div>
 </div>
 
-<!-- Modal: Style Analysis Edit -->
-<div class="modal-overlay" id="style-modal" style="display:none;">
-  <div class="modal">
-    <h3>스타일 분석 수정</h3>
-    <input type="hidden" id="style-edit-idx" value="-1">
-    <div id="style-modal-preview-wrap" style="width:100%;aspect-ratio:1/1;max-width:160px;border-radius:var(--radius);overflow:hidden;background:var(--bg-secondary);margin-bottom:12px;">
-      <img id="style-modal-preview" style="width:100%;height:100%;object-fit:cover;">
-    </div>
-    <div class="form-group">
-      <label>프레임 소재</label>
-      <input type="text" id="style-edit-material">
-    </div>
-    <div class="form-group">
-      <label>프레임 형태</label>
-      <input type="text" id="style-edit-shape">
-    </div>
-    <div class="form-group">
-      <label>프레임 스타일</label>
-      <input type="text" id="style-edit-style">
-    </div>
-    <div class="form-group">
-      <label>소재/디테일</label>
-      <input type="text" id="style-edit-detail">
-    </div>
-    <div class="form-group">
-      <label>메모</label>
-      <textarea id="style-edit-memo" placeholder="추가 메모"></textarea>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('style-modal')">취소</button>
-      <button id="style-delete-btn" class="btn" style="background:#fee2e2;color:#dc2626;" onclick="deleteStyleEntry()">삭제</button>
-      <button class="btn btn-primary" onclick="saveStyleEdit()">저장</button>
-    </div>
-  </div>
-</div>
-
 <!-- Modal: Brand -->
 <div class="modal-overlay" id="brand-modal" style="display:none;">
   <div class="modal">
@@ -1340,9 +1236,6 @@ let editingEventIdx = null;
 let todosData = JSON.parse(localStorage.getItem('todosData') || '[]');
 let notesData = localStorage.getItem('notesData') || '';
 let memosData = JSON.parse(localStorage.getItem('memosData') || '[]');
-let styleData = JSON.parse(localStorage.getItem('styleAnalysisData') || '[]');
-let styleCurrentResult = null;
-let styleLocalImage = null; // { dataUrl, base64, mimeType } — set when analyzing a locally-uploaded file instead of a URL
 
 // 브랜드/쿠폰 캐시 (localStorage로 즉시 렌더)
 let brandData  = JSON.parse(localStorage.getItem('brandData')  || '[]');
@@ -1393,10 +1286,12 @@ function init() {
   initTodos();
   renderMemos();
   renderMemoLockState();
-  renderStyleGrid();
   if (storeSalesDaily.length) { renderStoreMonthFilter(); applyStoreMonthFilter(); }
   renderGoalCard();
   if (onlineWeeklyTrend.length || onlineWeeklyBrands.length) renderOnlineWeeklyStats();
+  renderUploadTime('inv');
+  renderUploadTime('prod');
+  renderUploadTime('restock');
 
   // 캐시된 브랜드/쿠폰이 있으면 즉시 렌더 (Sheets 응답 전에 표시)
   if (brandData.length || couponData.length) {
@@ -1431,6 +1326,7 @@ function init() {
         document.getElementById('inv-upload-zone').style.display = 'none';
         showToast(`📦 재고 ${invData.length.toLocaleString()}건 불러옴`);
         scheduleHotItems();
+        renderUploadTime('inv');
       }
     }).catch(()=>{});
 
@@ -1450,6 +1346,7 @@ function init() {
       document.getElementById('prod-upload-zone').style.display = 'none';
       showToast(`🛍️ 상품 ${prodData.length.toLocaleString()}건 불러옴`);
       scheduleHotItems();
+      renderUploadTime('prod');
     }).catch(()=>{});
 
     // 캘린더 로드
@@ -1562,21 +1459,6 @@ function init() {
       localStorage.setItem('onlineWeeklyBrands', JSON.stringify(onlineWeeklyBrands));
       renderOnlineBrandTable();
     }).catch(()=>{});
-
-    // 스타일 분석 기록 로드
-    loadSheetData('스타일분석').then(d => {
-      if (!d || !Array.isArray(d) || d.length < 2) return;
-      const header = d[0].map(h => String(h));
-      const loaded = d.slice(1).map(row => {
-        const obj = {};
-        header.forEach((h,i) => obj[h] = row[i] !== undefined ? String(row[i]) : '');
-        return obj;
-      }).filter(r => r.imageUrl);
-      if (!loaded.length) return;
-      styleData = loaded;
-      localStorage.setItem('styleAnalysisData', JSON.stringify(styleData));
-      renderStyleGrid();
-    }).catch(()=>{});
   }
 }
 
@@ -1608,7 +1490,7 @@ async function saveSheetData(sheet, data) {
 // ============================================================
 // NAVIGATION
 // ============================================================
-const tabTitles = { inventory:'상품', calendar:'마케팅 캘린더', coupons:'브랜드 & 쿠폰', weekly:'매출 현황', brands:'브랜드 & 쿠폰', style:'스타일 분석', imgcrop:'이미지 크롭', todos:'할 일 / 업무 메모' };
+const tabTitles = { inventory:'상품', calendar:'마케팅 캘린더', coupons:'브랜드 & 쿠폰', weekly:'매출 현황', brands:'브랜드 & 쿠폰', imgcrop:'이미지 크롭', todos:'할 일 / 업무 메모' };
 const TODO_PW = '0001'; // 비밀번호 변경 시 여기 수정
 let todoUnlocked = false;
 let memoUnlocked = false;
@@ -1683,6 +1565,21 @@ function closeSidebar() {
 // ============================================================
 function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag'); }
 function handleDragLeave(e, id) { document.getElementById(id).classList.remove('drag'); }
+
+// 업로드 시각 표시 (브라우저 localStorage 기준 — 이 컴퓨터/브라우저에 남긴 마지막 업로드 시각)
+function setUploadTime(key) {
+  localStorage.setItem('uploadTime_' + key, new Date().toISOString());
+  renderUploadTime(key);
+}
+function renderUploadTime(key) {
+  const el = document.getElementById('uploadtime-' + key);
+  if (!el) return;
+  const iso = localStorage.getItem('uploadTime_' + key);
+  if (!iso) { el.textContent = ''; return; }
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  el.textContent = `업로드: ${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 function handleDrop(e, type) {
   e.preventDefault();
   const file = e.dataTransfer.files[0];
@@ -1843,6 +1740,7 @@ function processInvFile(file) {
       document.getElementById('inv-upload-zone').style.display = 'none';
       showToast(`재고 데이터 ${invData.length}건 로드 중... Google Sheets에 저장합니다.`);
       scheduleHotItems();
+      setUploadTime('inv');
 
       // Google Sheets에 필요한 컬럼만 저장
       const toSave = invData.map(r => ({
@@ -2775,6 +2673,7 @@ function parseProdRows(headerRow, dataRows) {
       filterProducts();
       document.getElementById('prod-upload-zone').style.display = 'none';
       showToast(`상품 데이터 ${prodData.length}건 로드 중... Google Sheets에 저장합니다.`);
+      setUploadTime('prod');
       scheduleHotItems();
       saveSheetData('상품', prodData).then(() => {
         showToast(`✅ 상품 ${prodData.length.toLocaleString()}건 Google Sheets 저장 완료!`);
@@ -2996,6 +2895,7 @@ function parseRestockRows(headerRow, dataRows) {
   renderRestockKPI();
   renderRestockTable();
   showToast(`🔔 재입고 알림 요청 ${restockRaw.length.toLocaleString()}건 (${restockData.length.toLocaleString()}개 상품) 불러옴`);
+  setUploadTime('restock');
 }
 
 function renderRestockKPI() {
@@ -3520,208 +3420,6 @@ function saveMemosToSheets() {
   }).catch(()=>{});
 }
 
-// ============================================================
-// STYLE ANALYSIS
-// ============================================================
-function handleStyleUrlInput() {
-  styleLocalImage = null;
-  document.getElementById('style-image-file').value = '';
-  previewStyleImage();
-}
-
-function previewStyleImage() {
-  const url = document.getElementById('style-image-url').value.trim();
-  const wrap = document.getElementById('style-preview-wrap');
-  if (!url) { wrap.innerHTML = '<span>이미지 미리보기</span>'; return; }
-  wrap.innerHTML = `<img src="${url}" onerror="this.parentElement.innerHTML='<span>이미지를 불러올 수 없습니다</span>'">`;
-}
-
-function handleStyleFileUpload(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  document.getElementById('style-image-url').value = '';
-  resizeImageFile(file, 600, 0.75).then(({ dataUrl, base64, mimeType }) => {
-    styleLocalImage = { dataUrl, base64, mimeType };
-    document.getElementById('style-preview-wrap').innerHTML = `<img src="${dataUrl}">`;
-  }).catch(() => showToast('이미지를 불러올 수 없습니다.'));
-}
-
-// 파일을 캔버스로 리사이즈 + JPEG 압축. Google Sheets 셀 용량(약 5만자)을 넘지 않도록
-// 결과가 크면 품질을 낮춰가며 재시도한다.
-function resizeImageFile(file, maxDim, quality) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxDim || height > maxDim) {
-          if (width >= height) { height = Math.round(height * maxDim / width); width = maxDim; }
-          else { width = Math.round(width * maxDim / height); height = maxDim; }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width; canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        let q = quality;
-        let dataUrl = canvas.toDataURL('image/jpeg', q);
-        while (dataUrl.length > 60000 && q > 0.3) {
-          q -= 0.15;
-          dataUrl = canvas.toDataURL('image/jpeg', q);
-        }
-        resolve({ dataUrl, base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' });
-      };
-      img.onerror = () => reject(new Error('image load failed'));
-      img.src = e.target.result;
-    };
-    reader.onerror = () => reject(new Error('file read failed'));
-    reader.readAsDataURL(file);
-  });
-}
-
-async function analyzeStyleImage() {
-  const url = document.getElementById('style-image-url').value.trim();
-  if (!url && !styleLocalImage) { showToast('이미지 URL을 입력하거나 파일을 업로드하세요.'); return; }
-  if (!SCRIPT_URL) { showToast('설정에서 Apps Script URL을 먼저 등록하세요.'); return; }
-
-  const btn = document.getElementById('style-analyze-btn');
-  btn.disabled = true;
-  btn.innerHTML = '분석 중...';
-  document.getElementById('style-result-card').style.display = 'none';
-
-  try {
-    const payload = styleLocalImage
-      ? { action: 'analyzeStyle', imageBase64: styleLocalImage.base64, mimeType: styleLocalImage.mimeType }
-      : { action: 'analyzeStyle', imageUrl: url };
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const json = await res.json();
-    const err = json.error || (json.result && json.result.error);
-    if (err) { showToast('분석 실패: ' + err); return; }
-
-    const style = json.result && json.result.style;
-    if (!style) { showToast('분석 결과를 받지 못했습니다.'); return; }
-
-    styleCurrentResult = { imageUrl: styleLocalImage ? styleLocalImage.dataUrl : url, ...style };
-    document.getElementById('style-res-material').value = style.frameMaterial || '';
-    document.getElementById('style-res-shape').value = style.frameShape || '';
-    document.getElementById('style-res-style').value = style.frameStyle || '';
-    document.getElementById('style-res-detail').value = style.materialDetail || '';
-    document.getElementById('style-res-memo').value = '';
-    document.getElementById('style-result-card').style.display = 'block';
-    showToast('분석 완료');
-  } catch (e) {
-    showToast('분석 중 오류가 발생했습니다.');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-sparkles"></i> 분석하기';
-  }
-}
-
-function saveStyleEntry() {
-  if (!styleCurrentResult) return;
-  const entry = {
-    imageUrl: styleCurrentResult.imageUrl,
-    frameMaterial: document.getElementById('style-res-material').value.trim(),
-    frameShape: document.getElementById('style-res-shape').value.trim(),
-    frameStyle: document.getElementById('style-res-style').value.trim(),
-    materialDetail: document.getElementById('style-res-detail').value.trim(),
-    memo: document.getElementById('style-res-memo').value.trim(),
-    created: new Date().toLocaleDateString('ko-KR')
-  };
-  styleData.unshift(entry);
-  saveStyleToSheets();
-  renderStyleGrid();
-  document.getElementById('style-result-card').style.display = 'none';
-  document.getElementById('style-image-url').value = '';
-  document.getElementById('style-image-file').value = '';
-  document.getElementById('style-preview-wrap').innerHTML = '<span>이미지 미리보기</span>';
-  styleCurrentResult = null;
-  styleLocalImage = null;
-  showToast('분석 기록에 저장했습니다.');
-}
-
-function renderStyleGrid() {
-  const grid = document.getElementById('style-grid');
-  if (!grid) return;
-  if (!styleData.length) {
-    grid.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);font-size:14px;">저장된 분석 기록이 없습니다.</div>';
-    return;
-  }
-  grid.innerHTML = styleData.map((s, idx) => `
-    <div class="style-card">
-      <img src="${s.imageUrl}" onerror="this.style.display='none'">
-      <div class="style-card-tags">
-        ${s.frameMaterial ? `<span class="style-tag">${s.frameMaterial}</span>` : ''}
-        ${s.frameShape ? `<span class="style-tag">${s.frameShape}</span>` : ''}
-        ${s.frameStyle ? `<span class="style-tag">${s.frameStyle}</span>` : ''}
-      </div>
-      <div class="style-card-detail">${s.materialDetail || ''}</div>
-      ${s.memo ? `<div class="style-card-memo">📝 ${s.memo}</div>` : ''}
-      <div class="style-card-footer">
-        <span style="font-size:10px;color:#9ca3af;">${s.created || ''}</span>
-        <div class="style-card-actions">
-          <button class="btn btn-sm" style="padding:2px 8px;background:rgba(0,0,0,.08);" onclick="openStyleEditModal(${idx})">✏️</button>
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function openStyleEditModal(idx) {
-  const s = styleData[idx];
-  if (!s) return;
-  document.getElementById('style-edit-idx').value = idx;
-  document.getElementById('style-modal-preview').src = s.imageUrl || '';
-  document.getElementById('style-edit-material').value = s.frameMaterial || '';
-  document.getElementById('style-edit-shape').value = s.frameShape || '';
-  document.getElementById('style-edit-style').value = s.frameStyle || '';
-  document.getElementById('style-edit-detail').value = s.materialDetail || '';
-  document.getElementById('style-edit-memo').value = s.memo || '';
-  document.getElementById('style-modal').style.display = 'flex';
-}
-
-function saveStyleEdit() {
-  const idx = parseInt(document.getElementById('style-edit-idx').value);
-  if (isNaN(idx) || idx < 0 || !styleData[idx]) return;
-  styleData[idx] = {
-    ...styleData[idx],
-    frameMaterial: document.getElementById('style-edit-material').value.trim(),
-    frameShape: document.getElementById('style-edit-shape').value.trim(),
-    frameStyle: document.getElementById('style-edit-style').value.trim(),
-    materialDetail: document.getElementById('style-edit-detail').value.trim(),
-    memo: document.getElementById('style-edit-memo').value.trim(),
-  };
-  closeModal('style-modal');
-  saveStyleToSheets();
-  renderStyleGrid();
-  showToast('수정 완료');
-}
-
-function deleteStyleEntry() {
-  const idx = parseInt(document.getElementById('style-edit-idx').value);
-  if (isNaN(idx) || idx < 0) return;
-  if (!confirm('이 분석 기록을 삭제할까요?')) return;
-  styleData.splice(idx, 1);
-  closeModal('style-modal');
-  saveStyleToSheets();
-  renderStyleGrid();
-  showToast('삭제 완료');
-}
-
-function saveStyleToSheets() {
-  localStorage.setItem('styleAnalysisData', JSON.stringify(styleData));
-  if (!SCRIPT_URL) return;
-  const header = ['imageUrl','frameMaterial','frameShape','frameStyle','materialDetail','memo','created'];
-  const rows = styleData.map(s => [s.imageUrl||'', s.frameMaterial||'', s.frameShape||'', s.frameStyle||'', s.materialDetail||'', s.memo||'', s.created||'']);
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify({action:'saveData', sheet:'스타일분석', data:[header, ...rows]}),
-    headers: {'Content-Type':'text/plain'}
-  }).catch(()=>{});
-}
 
 // ============================================================
 // MODALS / UTILITIES
