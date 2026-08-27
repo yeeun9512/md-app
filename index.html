@@ -3866,23 +3866,56 @@ function parseWeeklyReport(rows, fileName) {
   const get    = (row, ...keys) => { for (const k of keys) { if (hi[k] !== undefined) return String(row[hi[k]] || '').trim(); } return ''; };
   const getNum = (row, ...keys) => { const v = get(row, ...keys); return parseFloat(String(v).replace(/,/g, '')) || 0; };
 
-  const data = [];
-  for (let i = headerIdx + 1; i < rows.length; i++) {
-    const row = rows[i];
-    const brand = get(row, '브랜드', 'BRAND');
-    if (!brand || ['소계','합계','top10','합 계','소 계'].includes(brand)) continue;
-    const bd   = findBrandEntry(brand);
-    const type = bd ? (bd.memo || '') : '';
-    data.push({
-      brand, type,
-      qty:       getNum(row, '기간별 판매량', '판매량'),
-      revenue:   getNum(row, '기간별 매출(실결제가)', '기간별 매출', '매출'),
-      profit:    getNum(row, '기간별 이익', '이익'),
-      prevDiff:  get(row,  '이전 기간 판매량 증감', '전주대비', '증감'),
-      cumQty:    getNum(row, '연누적 판매량', '누적 판매량', '연누적판매량'),
-      cumProfit: getNum(row, '연누적 이익', '누적 이익', '연누적이익'),
-      coupon:    getNum(row, '쿠폰사용액', '쿠폰'),
+  let data;
+  if (hi['브랜드'] === undefined && hi['BRAND'] === undefined && hi['서브브랜드'] !== undefined && hi['판매수량'] !== undefined) {
+    // POS 거래건별 원본 내보내기(매장코드/서브브랜드/판매수량/판매금액 ...) — 브랜드별로 직접 집계
+    const stripCode = raw => { const idx = raw.indexOf(':'); return idx >= 0 ? raw.slice(idx + 1).trim() : raw.trim(); };
+    const map = new Map();
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+      const row = rows[i];
+      const rawBrand = get(row, '서브브랜드');
+      if (!rawBrand || rawBrand === '*:해당없음') continue;
+      const brand = stripCode(rawBrand);
+      if (!map.has(brand)) map.set(brand, { brand, qty: 0, revenue: 0, cost: 0, coupon: 0 });
+      const g = map.get(brand);
+      g.qty += getNum(row, '판매수량');
+      g.revenue += getNum(row, '실판매금액', '판매금액');
+      g.cost += getNum(row, '원가금액');
+      g.coupon += getNum(row, '쿠폰금액');
+    }
+    data = [...map.values()].map(g => {
+      const bd = findBrandEntry(g.brand);
+      return {
+        brand: g.brand,
+        type: bd ? (bd.memo || '') : '',
+        qty: g.qty,
+        revenue: g.revenue,
+        profit: g.revenue - g.cost,
+        prevDiff: '',
+        cumQty: 0,
+        cumProfit: 0,
+        coupon: g.coupon,
+      };
     });
+  } else {
+    data = [];
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+      const row = rows[i];
+      const brand = get(row, '브랜드', 'BRAND');
+      if (!brand || ['소계','합계','top10','합 계','소 계'].includes(brand)) continue;
+      const bd   = findBrandEntry(brand);
+      const type = bd ? (bd.memo || '') : '';
+      data.push({
+        brand, type,
+        qty:       getNum(row, '기간별 판매량', '판매량'),
+        revenue:   getNum(row, '기간별 매출(실결제가)', '기간별 매출', '매출'),
+        profit:    getNum(row, '기간별 이익', '이익'),
+        prevDiff:  get(row,  '이전 기간 판매량 증감', '전주대비', '증감'),
+        cumQty:    getNum(row, '연누적 판매량', '누적 판매량', '연누적판매량'),
+        cumProfit: getNum(row, '연누적 이익', '누적 이익', '연누적이익'),
+        coupon:    getNum(row, '쿠폰사용액', '쿠폰'),
+      });
+    }
   }
 
   weeklyReportData = data;
