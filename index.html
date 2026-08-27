@@ -3774,25 +3774,33 @@ function isOfflineChannel(brandName) {
   return ch.includes('오프라인') || ch === 'only off' || ch === '-';
 }
 
+// 같은 채널(온라인/오프라인)을 계산할 수 있는 데이터 소스가 여러 개면, 실제로 더 최근에
+// 업로드/입력한 쪽을 우선 사용한다 (setUploadTime으로 기록된 시각 기준). 업로드 시각을 알 수
+// 없는 쪽(예: 새로고침 전부터 있던 데이터)은 후순위로 취급해 기존 동작을 그대로 유지한다.
 function computeAutoChannelRevenue() {
   const hasWeekly = typeof weeklyReportData   !== 'undefined' && weeklyReportData.length   > 0;
   const hasStore  = typeof storeSalesData     !== 'undefined' && storeSalesData.length     > 0;
   const hasOnline = typeof onlineWeeklyTrend  !== 'undefined' && onlineWeeklyTrend.length   > 0;
   if (!hasWeekly && !hasStore && !hasOnline) return { online: null, offline: null, onlineSource: null, offlineSource: null };
 
-  let online = null, offline = null, onlineSource = null, offlineSource = null;
-  if (hasWeekly) {
-    online = 0;
-    weeklyReportData.forEach(r => { if (!isOfflineChannel(r.brand)) online += r.revenue; });
-    offline = 0;
-    weeklyReportData.forEach(r => { if (isOfflineChannel(r.brand)) offline += r.revenue; });
-    onlineSource = '매출 현황(브랜드별 상세)';
-    offlineSource = '매출 현황(브랜드별 상세)';
+  const weeklyOnline  = hasWeekly ? weeklyReportData.reduce((s, r) => s + (!isOfflineChannel(r.brand) ? r.revenue : 0), 0) : null;
+  const weeklyOffline = hasWeekly ? weeklyReportData.reduce((s, r) => s + (isOfflineChannel(r.brand)  ? r.revenue : 0), 0) : null;
+  const onlineTrendRevenue = hasOnline ? onlineWeeklyTrend.reduce((s, w) => s + w.revenue, 0) : null;
+  const storeRevenue       = hasStore  ? storeSalesData.reduce((s, r) => s + r.revenue, 0)   : null;
+
+  const weeklyTime = localStorage.getItem('uploadTime_weeklyReport');
+  const onlineTime = localStorage.getItem('uploadTime_onlineWeekly');
+  const storeTime  = localStorage.getItem('uploadTime_storeSales');
+
+  let online = weeklyOnline, onlineSource = hasWeekly ? '매출 현황(브랜드별 상세)' : null;
+  if (hasOnline && (!hasWeekly || !weeklyTime || (onlineTime && onlineTime > weeklyTime))) {
+    online = onlineTrendRevenue; onlineSource = '온라인 주간통계';
   }
-  // 온라인 주간통계(누적 업로드분)가 있으면 이 값을 온라인 실적으로 우선 사용
-  if (hasOnline) { online = onlineWeeklyTrend.reduce((s, w) => s + w.revenue, 0); onlineSource = '온라인 주간통계'; }
-  // 가맹점 매출(매장별 실제 오프라인 판매) 데이터가 있으면 이 값을 오프라인 실적으로 우선 사용
-  if (hasStore) { offline = storeSalesData.reduce((s, r) => s + r.revenue, 0); offlineSource = '가맹점 매출'; }
+
+  let offline = weeklyOffline, offlineSource = hasWeekly ? '매출 현황(브랜드별 상세)' : null;
+  if (hasStore && (!hasWeekly || !weeklyTime || (storeTime && storeTime > weeklyTime))) {
+    offline = storeRevenue; offlineSource = '가맹점 매출';
+  }
 
   return { online, offline, onlineSource, offlineSource };
 }
@@ -3934,6 +3942,7 @@ function parseWeeklyReport(rows, fileName) {
   }
 
   weeklyReportData = data;
+  setUploadTime('weeklyReport');
   const badge = document.getElementById('weekly-report-badge');
   if (badge) { badge.textContent = (fileName || '업로드됨') + ' · ' + data.length + '개 브랜드'; badge.style.display = ''; }
   renderWeeklyReport();
@@ -4000,6 +4009,7 @@ function parseStoreSales(rows) {
   const newKeys = new Set(newDaily.map(d => d.date + '|' + d.store));
   storeSalesDaily = storeSalesDaily.filter(d => !newKeys.has(d.date + '|' + d.store)).concat(newDaily);
   localStorage.setItem('storeSalesDaily', JSON.stringify(storeSalesDaily));
+  setUploadTime('storeSales');
 
   renderStoreMonthFilter();
   applyStoreMonthFilter();
@@ -4122,6 +4132,7 @@ function handleOnlineWeeklyFile(e) {
         if (sample.some(r => r.some(c => String(c).trim() === '브랜드'))) brandCount = parseOnlineWeeklyBrands(rows) || brandCount;
       });
       if (!weekCount && !brandCount) { showToast('인식 가능한 시트를 찾을 수 없습니다 (주차/브랜드 컬럼 확인)'); return; }
+      setUploadTime('onlineWeekly');
       const badge = document.getElementById('online-weekly-badge');
       if (badge) { badge.textContent = file.name + ' 반영됨'; badge.style.display = ''; }
       renderOnlineWeeklyStats();
@@ -4836,6 +4847,7 @@ function parseManualSalesInput() {
   if (!data.length) { showToast('파싱할 수 있는 데이터가 없습니다.'); return; }
 
   weeklyReportData = data;
+  setUploadTime('weeklyReport');
 
   // 기간 세팅
   weeklyDateStart = ds;
