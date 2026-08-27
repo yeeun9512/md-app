@@ -3783,8 +3783,9 @@ function computeAutoChannelRevenue() {
   const hasOnline = typeof onlineWeeklyTrend  !== 'undefined' && onlineWeeklyTrend.length   > 0;
   if (!hasWeekly && !hasStore && !hasOnline) return { online: null, offline: null, onlineSource: null, offlineSource: null };
 
-  const weeklyOnline  = hasWeekly ? weeklyReportData.reduce((s, r) => s + (!isOfflineChannel(r.brand) ? r.revenue : 0), 0) : null;
-  const weeklyOffline = hasWeekly ? weeklyReportData.reduce((s, r) => s + (isOfflineChannel(r.brand)  ? r.revenue : 0), 0) : null;
+  // POS 원본 업로드라 매장 단위 채널 정보가 있으면 그걸 그대로 쓰고, 아니면 브랜드 채널 태그로 추정
+  const weeklyOnline  = hasWeekly ? (weeklyReportChannelSplit ? weeklyReportChannelSplit.online  : weeklyReportData.reduce((s, r) => s + (!isOfflineChannel(r.brand) ? r.revenue : 0), 0)) : null;
+  const weeklyOffline = hasWeekly ? (weeklyReportChannelSplit ? weeklyReportChannelSplit.offline : weeklyReportData.reduce((s, r) => s + (isOfflineChannel(r.brand)  ? r.revenue : 0), 0)) : null;
   const onlineTrendRevenue = hasOnline ? onlineWeeklyTrend.reduce((s, w) => s + w.revenue, 0) : null;
   const storeRevenue       = hasStore  ? storeSalesData.reduce((s, r) => s + r.revenue, 0)   : null;
 
@@ -3842,6 +3843,7 @@ function renderGoalCard() {
 // WEEKLY REPORT
 // ============================================================
 let weeklyReportData = [];
+let weeklyReportChannelSplit = null; // { online, offline } — POS 원본 매장명 기준 실제 채널 매출 (원본 업로드일 때만 채워짐)
 let weeklyNaverData = [];
 let weeklyKakaoData = { cost: 0, sends: 0, clicks: 0 };
 let weeklyPushData  = { sends: 0, clicks: 0 };
@@ -3890,10 +3892,16 @@ function parseWeeklyReport(rows, fileName) {
   const getNum = (row, ...keys) => { const v = get(row, ...keys); return parseFloat(String(v).replace(/,/g, '')) || 0; };
 
   let data;
+  weeklyReportChannelSplit = null;
   if (hi['브랜드'] === undefined && hi['BRAND'] === undefined && hi['서브브랜드'] !== undefined && hi['판매수량'] !== undefined) {
     // POS 거래건별 원본 내보내기(매장코드/서브브랜드/판매수량/판매금액 ...) — 브랜드별로 직접 집계
+    // 매장명으로 실제 온라인/오프라인 채널을 판별 (브랜드에 등록된 채널 태그가 아니라 거래건 자체의 매장 기준)
+    // 오프라인 가맹점/직영점은 "라운즈 ○○점"처럼 "라운즈"로 시작하고 "점"으로 끝나는 이름만 해당.
+    // 그 외(온라인몰, 현대 팝업 같은 특수 채널 등)는 전부 온라인으로 집계.
+    const isOfflineStore = store => /^라운즈\s*\S*점$/.test(store.trim());
     const stripCode = raw => { const idx = raw.indexOf(':'); return idx >= 0 ? raw.slice(idx + 1).trim() : raw.trim(); };
     const map = new Map();
+    let rawOnline = 0, rawOffline = 0;
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const row = rows[i];
       const rawBrand = get(row, '서브브랜드');
@@ -3901,11 +3909,15 @@ function parseWeeklyReport(rows, fileName) {
       const brand = stripCode(rawBrand);
       if (!map.has(brand)) map.set(brand, { brand, qty: 0, revenue: 0, cost: 0, coupon: 0 });
       const g = map.get(brand);
+      const rev = getNum(row, '실판매금액', '판매금액');
       g.qty += getNum(row, '판매수량');
-      g.revenue += getNum(row, '실판매금액', '판매금액');
+      g.revenue += rev;
       g.cost += getNum(row, '원가금액');
       g.coupon += getNum(row, '쿠폰금액');
+      const store = get(row, '매장명');
+      if (isOfflineStore(store)) rawOffline += rev; else rawOnline += rev;
     }
+    weeklyReportChannelSplit = { online: rawOnline, offline: rawOffline };
     data = [...map.values()].map(g => {
       const bd = findBrandEntry(g.brand);
       return {
@@ -4847,6 +4859,7 @@ function parseManualSalesInput() {
   if (!data.length) { showToast('파싱할 수 있는 데이터가 없습니다.'); return; }
 
   weeklyReportData = data;
+  weeklyReportChannelSplit = null; // 직접 입력은 매장 단위 정보가 없어 브랜드 채널 태그 기준으로 되돌림
   setUploadTime('weeklyReport');
 
   // 기간 세팅
