@@ -658,6 +658,9 @@ tbody td { padding: 8px 12px; white-space: nowrap; }
         <input type="file" id="weekly-report-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleWeeklyReportFile(event)">
         <button class="btn btn-sm" onclick="openManualSalesInput()"><i class="ti ti-keyboard"></i> 직접 입력</button>
       </div>
+      <div id="weekly-search-wrap" style="display:none;margin-bottom:8px;">
+        <input class="search-input" id="weekly-search" placeholder="브랜드 검색..." oninput="renderWeeklyReport()">
+      </div>
       <div id="weekly-table-wrap" class="table-wrap" style="display:none;">
         <table>
           <thead id="weekly-thead"></thead>
@@ -2357,7 +2360,7 @@ function renderHotItems() {
 // ============================================================
 // SORT
 // ============================================================
-const sortState = { inv: { key: '', dir: 1 }, prod: { key: '', dir: 1 }, restock: { key: 'count', dir: -1 }, store: { key: 'revenue', dir: -1 }, onlineBrand: { key: 'revenue', dir: -1 } };
+const sortState = { inv: { key: '', dir: 1 }, prod: { key: '', dir: 1 }, restock: { key: 'count', dir: -1 }, store: { key: 'revenue', dir: -1 }, onlineBrand: { key: 'revenue', dir: -1 }, weekly: { key: '', dir: 1 } };
 const hotSortState = {
   soldOut:     { key: '', dir: 1 },
   lowStock:    { key: '', dir: 1 },
@@ -2398,6 +2401,7 @@ function sortTable(type, key) {
   else if (type === 'restock') { restockPage = 1; renderRestockTable(); }
   else if (type === 'store') { renderStoreSalesTable(); }
   else if (type === 'onlineBrand') { renderOnlineBrandTable(); }
+  else if (type === 'weekly') { renderWeeklyReport(); }
 
 }
 
@@ -2430,6 +2434,15 @@ function applySortStore(arr) {
 
 function applySortRestock(arr) {
   const { key, dir } = sortState.restock;
+  if (!key) return arr;
+  return [...arr].sort((a, b) => {
+    const av = a[key] ?? ''; const bv = b[key] ?? '';
+    return typeof av === 'number' ? (av - bv) * dir : String(av).localeCompare(String(bv), 'ko') * dir;
+  });
+}
+
+function applySortWeekly(arr) {
+  const { key, dir } = sortState.weekly;
   if (!key) return arr;
   return [...arr].sort((a, b) => {
     const av = a[key] ?? ''; const bv = b[key] ?? '';
@@ -3765,24 +3778,26 @@ function computeAutoChannelRevenue() {
   const hasWeekly = typeof weeklyReportData   !== 'undefined' && weeklyReportData.length   > 0;
   const hasStore  = typeof storeSalesData     !== 'undefined' && storeSalesData.length     > 0;
   const hasOnline = typeof onlineWeeklyTrend  !== 'undefined' && onlineWeeklyTrend.length   > 0;
-  if (!hasWeekly && !hasStore && !hasOnline) return { online: null, offline: null };
+  if (!hasWeekly && !hasStore && !hasOnline) return { online: null, offline: null, onlineSource: null, offlineSource: null };
 
-  let online = null, offline = null;
+  let online = null, offline = null, onlineSource = null, offlineSource = null;
   if (hasWeekly) {
     online = 0;
     weeklyReportData.forEach(r => { if (!isOfflineChannel(r.brand)) online += r.revenue; });
     offline = 0;
     weeklyReportData.forEach(r => { if (isOfflineChannel(r.brand)) offline += r.revenue; });
+    onlineSource = '매출 현황(브랜드별 상세)';
+    offlineSource = '매출 현황(브랜드별 상세)';
   }
   // 온라인 주간통계(누적 업로드분)가 있으면 이 값을 온라인 실적으로 우선 사용
-  if (hasOnline) online = onlineWeeklyTrend.reduce((s, w) => s + w.revenue, 0);
+  if (hasOnline) { online = onlineWeeklyTrend.reduce((s, w) => s + w.revenue, 0); onlineSource = '온라인 주간통계'; }
   // 가맹점 매출(매장별 실제 오프라인 판매) 데이터가 있으면 이 값을 오프라인 실적으로 우선 사용
-  if (hasStore) offline = storeSalesData.reduce((s, r) => s + r.revenue, 0);
+  if (hasStore) { offline = storeSalesData.reduce((s, r) => s + r.revenue, 0); offlineSource = '가맹점 매출'; }
 
-  return { online, offline };
+  return { online, offline, onlineSource, offlineSource };
 }
 
-function renderGoalProgress(icon, label, target, actual, isAuto) {
+function renderGoalProgress(icon, label, target, actual, sourceLabel) {
   const pct = target ? Math.min(100, Math.round(actual / target * 100)) : 0;
   return `
     <div style="margin-bottom:10px;">
@@ -3793,7 +3808,7 @@ function renderGoalProgress(icon, label, target, actual, isAuto) {
       <div style="height:8px;border-radius:4px;background:var(--bg-secondary);overflow:hidden;">
         <div style="height:100%;width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent)'};border-radius:4px;transition:width .3s;"></div>
       </div>
-      <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">${isAuto ? '매출 현황 데이터 기준 자동 집계' : '수동 입력 실적 기준'}</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">${sourceLabel ? sourceLabel + ' 데이터 기준 자동 집계' : '수동 입력 실적 기준'}</div>
     </div>
   `;
 }
@@ -3809,8 +3824,8 @@ function renderGoalCard() {
   const offlineActual = offlineIsAuto ? auto.offline : (goalData.offline?.manualActual || 0);
 
   let html = `<div style="font-weight:600;color:var(--text-primary);margin-bottom:10px;">${goalData.label}</div>`;
-  if (goalData.online?.target) html += renderGoalProgress('🖥️', '온라인', goalData.online.target, onlineActual, onlineIsAuto);
-  if (goalData.offline?.target) html += renderGoalProgress('🏬', '오프라인', goalData.offline.target, offlineActual, offlineIsAuto);
+  if (goalData.online?.target) html += renderGoalProgress('🖥️', '온라인', goalData.online.target, onlineActual, auto.onlineSource);
+  if (goalData.offline?.target) html += renderGoalProgress('🏬', '오프라인', goalData.offline.target, offlineActual, auto.offlineSource);
   body.innerHTML = html;
 }
 
@@ -4608,8 +4623,10 @@ function renderWeeklyReport() {
   const merged = weeklyReportData.map(r => {
     const nv = naverBrandMap[r.brand.toUpperCase()] || 0;
     const totalAd = nv;
-    const roas = totalAd > 0 ? r.revenue / totalAd : null;
-    return { ...r, naverCost: nv, roas };
+    const roas = totalAd > 0 ? r.revenue / totalAd : 0;
+    const margin = r.revenue > 0 ? r.profit / r.revenue * 100 : 0;
+    const couponRatio = r.revenue > 0 ? r.coupon / r.revenue * 100 : 0;
+    return { ...r, naverCost: nv, roas, margin, couponRatio };
   });
 
   const totalRevenue = merged.reduce((s, r) => s + r.revenue, 0);
@@ -4638,24 +4655,38 @@ function renderWeeklyReport() {
     '부분위탁':'background:#fff7ed;color:#7c2d12',
   };
 
+  const searchWrap = document.getElementById('weekly-search-wrap');
+  if (searchWrap) searchWrap.style.display = 'block';
+  const searchTerm = (document.getElementById('weekly-search')?.value || '').trim().toLowerCase();
+  const filteredRows = searchTerm ? merged.filter(r => r.brand.toLowerCase().includes(searchTerm)) : merged;
+  const sortedRows = applySortWeekly(filteredRows);
+  const rowsQty     = filteredRows.reduce((s, r) => s + r.qty, 0);
+  const rowsRevenue = filteredRows.reduce((s, r) => s + r.revenue, 0);
+  const rowsProfit  = filteredRows.reduce((s, r) => s + r.profit, 0);
+  const rowsCoupon  = filteredRows.reduce((s, r) => s + r.coupon, 0);
+  const rowsNaverCost = filteredRows.reduce((s, r) => s + r.naverCost, 0);
+  const rowsRoas    = rowsNaverCost > 0 ? rowsRevenue / rowsNaverCost : null;
+
+  const sortIcon = key => sortState.weekly.key === key ? (sortState.weekly.dir === 1 ? '↑' : '↓') : '↕';
+
   const wrap = document.getElementById('weekly-table-wrap');
   if (wrap) {
     wrap.style.display = 'block';
     document.getElementById('weekly-thead').innerHTML = `<tr>
       <th style="width:32px">#</th>
-      <th>브랜드</th>
-      <th>구분</th>
-      <th style="text-align:right">판매량</th>
-      <th style="text-align:right">매출</th>
-      <th style="text-align:right">이익</th>
-      <th style="text-align:right">이익률</th>
+      <th onclick="sortTable('weekly','brand')" style="cursor:pointer;">브랜드 <span id="weekly-sort-brand">${sortIcon('brand')}</span></th>
+      <th onclick="sortTable('weekly','type')" style="cursor:pointer;">구분 <span id="weekly-sort-type">${sortIcon('type')}</span></th>
+      <th onclick="sortTable('weekly','qty')" style="text-align:right;cursor:pointer;">판매량 <span id="weekly-sort-qty">${sortIcon('qty')}</span></th>
+      <th onclick="sortTable('weekly','revenue')" style="text-align:right;cursor:pointer;">매출 <span id="weekly-sort-revenue">${sortIcon('revenue')}</span></th>
+      <th onclick="sortTable('weekly','profit')" style="text-align:right;cursor:pointer;">이익 <span id="weekly-sort-profit">${sortIcon('profit')}</span></th>
+      <th onclick="sortTable('weekly','margin')" style="text-align:right;cursor:pointer;">이익률 <span id="weekly-sort-margin">${sortIcon('margin')}</span></th>
       <th style="text-align:right">전주대비</th>
-      ${hasAd ? '<th style="text-align:right">네이버 광고비</th><th style="text-align:right">ROAS</th>' : ''}
-      <th style="text-align:right">쿠폰</th>
-      <th style="text-align:right">쿠폰비율</th>
+      ${hasAd ? `<th onclick="sortTable('weekly','naverCost')" style="text-align:right;cursor:pointer;">네이버 광고비 <span id="weekly-sort-naverCost">${sortIcon('naverCost')}</span></th><th onclick="sortTable('weekly','roas')" style="text-align:right;cursor:pointer;">ROAS <span id="weekly-sort-roas">${sortIcon('roas')}</span></th>` : ''}
+      <th onclick="sortTable('weekly','coupon')" style="text-align:right;cursor:pointer;">쿠폰 <span id="weekly-sort-coupon">${sortIcon('coupon')}</span></th>
+      <th onclick="sortTable('weekly','couponRatio')" style="text-align:right;cursor:pointer;">쿠폰비율 <span id="weekly-sort-couponRatio">${sortIcon('couponRatio')}</span></th>
     </tr>`;
 
-    document.getElementById('weekly-tbody').innerHTML = merged.map((r, i) => {
+    document.getElementById('weekly-tbody').innerHTML = sortedRows.map((r, i) => {
       const diffRaw = String(r.prevDiff || '').trim();
       const diffNum = parseFloat(diffRaw.replace(/[^0-9.\-]/g, ''));
       const hasArrow = diffRaw.includes('▲') || diffRaw.includes('▼');
@@ -4685,15 +4716,15 @@ function renderWeeklyReport() {
         <td style="text-align:right;${couponRatioStyle}">${couponRatioStr}</td>
       </tr>`;
     }).join('') + `<tr style="background:var(--bg-secondary);font-weight:600;font-size:13px;">
-      <td colspan="3" style="padding-left:10px;">합계</td>
-      <td style="text-align:right">${totalQty.toLocaleString()}</td>
-      <td style="text-align:right">${totalRevenue.toLocaleString()}</td>
-      <td style="text-align:right">${totalProfit.toLocaleString()}</td>
-      <td style="text-align:right;color:#16a34a;font-weight:600">${totalRevenue > 0 ? (totalProfit/totalRevenue*100).toFixed(1)+'%' : '-'}</td>
+      <td colspan="3" style="padding-left:10px;">합계${searchTerm ? ` (검색결과 ${filteredRows.length}개)` : ''}</td>
+      <td style="text-align:right">${rowsQty.toLocaleString()}</td>
+      <td style="text-align:right">${rowsRevenue.toLocaleString()}</td>
+      <td style="text-align:right">${rowsProfit.toLocaleString()}</td>
+      <td style="text-align:right;color:#16a34a;font-weight:600">${rowsRevenue > 0 ? (rowsProfit/rowsRevenue*100).toFixed(1)+'%' : '-'}</td>
       <td></td>
-      ${hasAd ? `<td style="text-align:right">${merged.reduce((s,r)=>s+r.naverCost,0).toLocaleString()}</td><td style="text-align:right;color:#6366f1">${overallRoas ? overallRoas.toFixed(1)+'x' : '-'}</td>` : ''}
-      <td style="text-align:right">${totalCoupon.toLocaleString()}</td>
-      <td style="text-align:right">${totalRevenue > 0 ? (totalCoupon / totalRevenue * 100).toFixed(1) + '%' : '-'}</td>
+      ${hasAd ? `<td style="text-align:right">${rowsNaverCost.toLocaleString()}</td><td style="text-align:right;color:#6366f1">${rowsRoas ? rowsRoas.toFixed(1)+'x' : '-'}</td>` : ''}
+      <td style="text-align:right">${rowsCoupon.toLocaleString()}</td>
+      <td style="text-align:right">${rowsRevenue > 0 ? (rowsCoupon / rowsRevenue * 100).toFixed(1) + '%' : '-'}</td>
     </tr>`;
   }
 
