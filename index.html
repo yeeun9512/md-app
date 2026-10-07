@@ -2408,30 +2408,31 @@ function renderHotItems() {
 
   function normalize(s) { return String(s||'').toLowerCase().replace(/[\s\-_\[\]()]/g,''); }
 
-  // prod → inv 매칭
-  function findInv(prod) {
-    if (!hasInv) return null;
-    const pName = normalize(prod.refName || prod.name);
-    let r = invData.find(r => normalize(r.name) === pName);
-    if (r) return r;
-    const key = pName.slice(0, 6);
-    if (key.length >= 4) r = invData.find(r => normalize(r.name).includes(key) || pName.includes(normalize(r.name).slice(0,6)));
-    if (r) return r;
-    r = invData.find(r => r.sku && prod.code && normalize(r.sku) === normalize(prod.code));
-    return r || null;
+  // 재고 ↔ 상품 매칭용 색인 (상품·재고가 수만 건이라 매번 전체를 훑으면 페이지가 멈춤)
+  // 우선순위: 이름 완전일치 → 이름 앞 6글자 일치 → 코드 일치
+  function buildIndex(rows, nameOf, codeOf, skip) {
+    const byName = new Map(), byPrefix = new Map(), byCode = new Map();
+    rows.forEach(r => {
+      if (skip && skip(r)) return;
+      const n = normalize(nameOf(r)), c = normalize(codeOf(r));
+      if (n && !byName.has(n)) byName.set(n, r);
+      if (n.length >= 6 && !byPrefix.has(n.slice(0, 6))) byPrefix.set(n.slice(0, 6), r);
+      if (c && !byCode.has(c)) byCode.set(c, r);
+    });
+    return { byName, byPrefix, byCode };
   }
+  function lookup(idx, name, code) {
+    const n = normalize(name);
+    return idx.byName.get(n) || (n.length >= 6 && idx.byPrefix.get(n.slice(0, 6))) || (code && idx.byCode.get(normalize(code))) || null;
+  }
+  const invIdx  = hasInv ? buildIndex(invData, r => r.name, r => r.sku) : null;
+  const prodIdx = buildIndex(prodData, p => p.refName || p.name, p => p.code, isExcluded);
+
+  // prod → inv 매칭
+  function findInv(prod) { return hasInv ? lookup(invIdx, prod.refName || prod.name, prod.code) : null; }
 
   // inv → prod 매칭 (역방향: 재고 기준으로 판매 데이터 붙이기)
-  function findProd(inv) {
-    const iName = normalize(inv.name);
-    let p = prodData.find(p => !isExcluded(p) && normalize(p.refName || p.name) === iName);
-    if (p) return p;
-    const key = iName.slice(0, 6);
-    if (key.length >= 4) p = prodData.find(p => !isExcluded(p) && (normalize(p.refName||p.name).includes(key) || iName.includes(normalize(p.refName||p.name).slice(0,6))));
-    if (p) return p;
-    p = prodData.find(p => !isExcluded(p) && p.code && inv.sku && normalize(p.code) === normalize(inv.sku));
-    return p || null;
-  }
+  function findProd(inv) { return lookup(prodIdx, inv.name, inv.sku); }
 
   const top20 = [...prodData].filter(p => !isExcluded(p)).sort((a,b) => b.sales - a.sales).slice(0, HOT_LIMIT);
   const maxSales = top20[0]?.sales || 1;
@@ -2462,11 +2463,10 @@ function renderHotItems() {
 
   // 🟡 조회수 높은데 전환율 낮음 (상품 데이터만 있어도 표시)
   const highViewLow = [...prodData]
-    .filter(p => !isExcluded(p) && p.views >= 100 && p.views > 0)
-    .map(p => ({p, inv: findInv(p), rate: p.sales / p.views}))
-    .filter(({rate}) => rate < 0.02)
-    .sort((a,b) => b.p.views - a.p.views)
-    .slice(0, 5);
+    .filter(p => !isExcluded(p) && p.views >= 100 && p.sales / p.views < 0.02)
+    .sort((a,b) => b.views - a.views)
+    .slice(0, 5)
+    .map(p => ({p, inv: findInv(p), rate: p.sales / p.views}));
 
   if (!soldOut.length && !lowStock.length && !highViewLow.length) { sec.style.display = 'none'; return; }
 
